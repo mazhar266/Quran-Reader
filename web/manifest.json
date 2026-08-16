@@ -1,6 +1,6 @@
 {
-    "name": "quran_reader",
-    "short_name": "quran_reader",
+    "name": "Quran Reader",
+    "short_name": "Quran Reader",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

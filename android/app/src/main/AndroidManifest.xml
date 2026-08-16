@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="quran_reader"
+        android:label="Quran Reader"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

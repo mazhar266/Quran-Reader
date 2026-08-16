@@ -42,7 +42,7 @@ Future<void> main() async {
             ),
           ),
           home: step.value == 3
-              ? SettingsScreen(repository: repo)
+              ? _ScrolledSettings(repo: repo)
               : SurahScreen(
                   repository: repo,
                   surah: repo.surahs[1],
@@ -53,4 +53,37 @@ Future<void> main() async {
       ),
     ),
   );
+}
+
+/// Drives the settings list down to the tajwid legend. The ListView there has
+/// no controller of its own, so it attaches to the primary one.
+class _ScrolledSettings extends StatefulWidget {
+  const _ScrolledSettings({required this.repo});
+  final QuranRepository repo;
+  @override
+  State<_ScrolledSettings> createState() => _ScrolledSettingsState();
+}
+
+class _ScrolledSettingsState extends State<_ScrolledSettings> {
+  final _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Timer(const Duration(milliseconds: 600), () {
+        if (_controller.hasClients) {
+          _controller.jumpTo(_controller.position.maxScrollExtent);
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => PrimaryScrollController(
+        controller: _controller,
+        // Desktop is not in the default inherit set, so opt every platform in.
+        automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+        child: SettingsScreen(repository: widget.repo),
+      );
 }
