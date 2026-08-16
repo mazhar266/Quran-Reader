@@ -1,21 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../data/models.dart';
 import '../data/quran_repository.dart';
+import '../data/reading_position.dart';
 import '../qql/qql.dart';
 import '../settings/settings_controller.dart';
+import '../tajwid/tajwid_style.dart';
 
 class SurahScreen extends StatefulWidget {
   const SurahScreen({
     super.key,
     required this.repository,
     required this.surah,
+    required this.positions,
+    this.startAtAyah,
   });
 
   final QuranRepository repository;
   final Surah surah;
+  final ReadingPositionStore positions;
+
+  /// Ayah to open at, when resuming. Null starts at the beginning.
+  final int? startAtAyah;
 
   @override
   State<SurahScreen> createState() => _SurahScreenState();
@@ -51,6 +61,9 @@ class _SurahScreenState extends State<SurahScreen> {
       _error = e;
     }
   }
+
+  void _onAyahInView(int ayah) =>
+      widget.positions.record(widget.surah.number, ayah);
 
   @override
   Widget build(BuildContext context) {
@@ -98,17 +111,99 @@ class _SurahScreenState extends State<SurahScreen> {
     final ayahs = _ayahs!;
     final arabicStyle = settings.arabicTextStyle(context);
 
+    // Keyed by mode so that switching modes rebuilds the scroller from
+    // scratch rather than carrying a meaningless offset across two very
+    // different layouts.
     if (settings.readingMode == ReadingMode.reading) {
-      return _ContinuousPage(ayahs: ayahs, arabicStyle: arabicStyle);
+      return _ContinuousPage(
+        key: const ValueKey('reading'),
+        ayahs: ayahs,
+        arabicStyle: arabicStyle,
+        startAtAyah: widget.startAtAyah,
+        onAyahInView: _onAyahInView,
+      );
     }
 
-    return ListView.separated(
+    return _AyahList(
+      key: const ValueKey('normal'),
+      ayahs: ayahs,
+      arabicStyle: arabicStyle,
+      startAtAyah: widget.startAtAyah,
+      onAyahInView: _onAyahInView,
+    );
+  }
+}
+
+/// Normal mode: one ayah, then its translation.
+///
+/// Uses a positioned list so the ayah at the top of the viewport can be read
+/// off directly, and so resuming can jump to an ayah by index — neither is
+/// possible with a plain lazy ListView, where items far from the viewport have
+/// no known height.
+class _AyahList extends StatefulWidget {
+  const _AyahList({
+    super.key,
+    required this.ayahs,
+    required this.arabicStyle,
+    required this.startAtAyah,
+    required this.onAyahInView,
+  });
+
+  final List<Ayah> ayahs;
+  final TextStyle arabicStyle;
+  final int? startAtAyah;
+  final ValueChanged<int> onAyahInView;
+
+  @override
+  State<_AyahList> createState() => _AyahListState();
+}
+
+class _AyahListState extends State<_AyahList> {
+  final _positions = ItemPositionsListener.create();
+
+  @override
+  void initState() {
+    super.initState();
+    _positions.itemPositions.addListener(_report);
+  }
+
+  @override
+  void dispose() {
+    _positions.itemPositions.removeListener(_report);
+    super.dispose();
+  }
+
+  void _report() {
+    final visible = _positions.itemPositions.value;
+    if (visible.isEmpty) return;
+    // The topmost item still showing: the one with the smallest leading edge
+    // that has not yet scrolled off the top.
+    final first = visible
+        .where((p) => p.itemTrailingEdge > 0)
+        .fold<ItemPosition?>(
+          null,
+          (best, p) => best == null || p.index < best.index ? p : best,
+        );
+    if (first != null) widget.onAyahInView(widget.ayahs[first.index].number);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = widget.startAtAyah == null
+        ? 0
+        : widget.ayahs
+            .indexWhere((a) => a.number == widget.startAtAyah)
+            .clamp(0, widget.ayahs.length - 1);
+
+    return ScrollablePositionedList.separated(
+      itemPositionsListener: _positions,
+      initialScrollIndex: initial,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      itemCount: ayahs.length,
+      itemCount: widget.ayahs.length,
       separatorBuilder: (_, _) => const Divider(height: 28),
       itemBuilder: (context, index) => _AyahTile(
-        ayah: ayahs[index],
-        arabicStyle: arabicStyle,
+        ayah: widget.ayahs[index],
+        arabicStyle: widget.arabicStyle,
       ),
     );
   }
@@ -119,30 +214,133 @@ class _SurahScreenState extends State<SurahScreen> {
 /// Ayahs are not laid out one per line — each continues from where the last
 /// ended, separated only by its marker, so the text wraps like a mushaf rather
 /// than a list. That means one paragraph for the entire surah, which is also
-/// why this cannot be a lazy ListView: the line breaks depend on every ayah
-/// before it.
-class _ContinuousPage extends StatelessWidget {
-  const _ContinuousPage({required this.ayahs, required this.arabicStyle});
+/// why this cannot be a lazy list: the line breaks depend on every ayah before
+/// it.
+///
+/// Because it is a single paragraph there are no items to count, so the ayah
+/// in view is found by asking the laid-out paragraph which character sits at
+/// the top of the viewport, and mapping that back through [_ayahAt].
+class _ContinuousPage extends StatefulWidget {
+  const _ContinuousPage({
+    super.key,
+    required this.ayahs,
+    required this.arabicStyle,
+    required this.startAtAyah,
+    required this.onAyahInView,
+  });
 
   final List<Ayah> ayahs;
   final TextStyle arabicStyle;
+  final int? startAtAyah;
+  final ValueChanged<int> onAyahInView;
+
+  @override
+  State<_ContinuousPage> createState() => _ContinuousPageState();
+}
+
+class _ContinuousPageState extends State<_ContinuousPage> {
+  final _scroll = ScrollController();
+  final _paragraphKey = GlobalKey();
+
+  /// Character offset in the paragraph at which each ayah starts, parallel to
+  /// [_ContinuousPage.ayahs]. Rebuilt whenever the spans are.
+  List<int> _ayahStarts = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_report);
+    if (widget.startAtAyah != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _jumpToStart());
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_report);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// Vertical padding above the paragraph, which sits between scroll-view
+  /// coordinates and the paragraph's own.
+  static const _topPadding = 16.0;
+
+  RenderParagraph? get _paragraph {
+    final object = _paragraphKey.currentContext?.findRenderObject();
+    return object is RenderParagraph ? object : null;
+  }
+
+  void _jumpToStart() {
+    final index = widget.ayahs.indexWhere((a) => a.number == widget.startAtAyah);
+    final paragraph = _paragraph;
+    if (index < 0 || paragraph == null || index >= _ayahStarts.length) return;
+
+    final caret = paragraph.getOffsetForCaret(
+      TextPosition(offset: _ayahStarts[index]),
+      Rect.zero,
+    );
+    if (!_scroll.hasClients) return;
+    _scroll.jumpTo(
+      (caret.dy + _topPadding).clamp(0.0, _scroll.position.maxScrollExtent),
+    );
+  }
+
+  void _report() {
+    final paragraph = _paragraph;
+    if (paragraph == null || _ayahStarts.isEmpty) return;
+    // The viewport top, in the paragraph's own coordinates. x is the right
+    // edge because the text is right-to-left, so that is where a line starts.
+    final localY = (_scroll.offset - _topPadding).clamp(0.0, double.infinity);
+    final position = paragraph.getPositionForOffset(
+      Offset(paragraph.size.width, localY),
+    );
+    widget.onAyahInView(_ayahAt(position.offset));
+  }
+
+  /// The ayah owning character [offset], by binary search over [_ayahStarts].
+  int _ayahAt(int offset) {
+    var lo = 0;
+    var hi = _ayahStarts.length - 1;
+    while (lo < hi) {
+      final mid = (lo + hi + 1) ~/ 2;
+      if (_ayahStarts[mid] <= offset) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return widget.ayahs[lo].number;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final palette = TajwidPalette.of(context);
+    final markerColor = Theme.of(context).colorScheme.primary;
+
+    final spans = <InlineSpan>[];
+    final starts = <int>[];
+    var chars = 0;
+    for (final ayah in widget.ayahs) {
+      starts.add(chars);
+      for (final span in tajwidSpans(ayah.arabic, palette)) {
+        spans.add(span);
+      }
+      final marker = ayahMarkerText(ayah.number);
+      spans.add(TextSpan(text: marker, style: TextStyle(color: markerColor)));
+      chars += ayah.arabic.length + marker.length;
+    }
+    _ayahStarts = starts;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+      controller: _scroll,
+      padding: const EdgeInsets.fromLTRB(20, _topPadding, 20, 40),
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Text.rich(
-          TextSpan(
-            children: [
-              for (final ayah in ayahs) ...[
-                TextSpan(text: ayah.arabic),
-                _ayahMarker(context, ayah.number),
-              ],
-            ],
-          ),
-          style: arabicStyle,
+          TextSpan(children: spans),
+          key: _paragraphKey,
+          style: widget.arabicStyle,
           textAlign: TextAlign.justify,
         ),
       ),
@@ -169,8 +367,13 @@ class _AyahTile extends StatelessWidget {
           child: Text.rich(
             TextSpan(
               children: [
-                TextSpan(text: ayah.arabic),
-                _ayahMarker(context, ayah.number),
+                ...tajwidSpans(ayah.arabic, TajwidPalette.of(context)),
+                TextSpan(
+                  text: ayahMarkerText(ayah.number),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
               ],
             ),
             style: arabicStyle,
@@ -188,24 +391,24 @@ class _AyahTile extends StatelessWidget {
       ],
     );
   }
-
 }
 
-/// The end-of-ayah marker, as a span rather than a widget.
+/// The end-of-ayah marker.
 ///
-/// Two constraints shape this. U+06DD (ARABIC END OF AYAH) is the correct
+/// Three constraints shape this. U+06DD (ARABIC END OF AYAH) is the correct
 /// character, but the bundled faces draw it as an empty ring and do not
-/// compose the following digits inside it, so the number vanishes. And a
+/// compose the following digits inside it, so the number vanishes. A
 /// WidgetSpan cannot stand in for it either: reading mode puts every ayah of
 /// the surah in one RTL paragraph, and Flutter matches multiple placeholders
 /// to their boxes in visual rather than logical order there, which numbers the
-/// ayahs backwards. Ornate parentheses around the number are plain text, so
-/// they order correctly and every bundled face draws them.
+/// ayahs backwards.
+///
+/// That leaves ornate parentheses, which every bundled face draws — but they
+/// are bidi-mirrored, so inside an RTL paragraph U+FD3E and U+FD3F swap and
+/// writing them in the obvious order bows them away from the number instead of
+/// enclosing it. Hence U+FD3F first.
 ///
 /// The digits are Western rather than Arabic-Indic on purpose: Al Majeed and
 /// PDMS Saleem both list U+0660-0669 in their cmap but map them to blank
 /// glyphs, so the number disappears. All three faces draw 0-9.
-TextSpan _ayahMarker(BuildContext context, int number) => TextSpan(
-      text: ' \uFD3E$number\uFD3F ',
-      style: TextStyle(color: Theme.of(context).colorScheme.primary),
-    );
+String ayahMarkerText(int number) => ' ﴿$number﴾ ';

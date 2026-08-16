@@ -3,19 +3,26 @@
 import 'package:flutter/material.dart';
 
 import 'src/data/quran_repository.dart';
+import 'src/data/reading_position.dart';
 import 'src/screens/surah_list_screen.dart';
 import 'src/settings/settings_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final settings = await SettingsController.load();
-  runApp(QuranReaderApp(settings: settings));
+  final positions = await ReadingPositionStore.load();
+  runApp(QuranReaderApp(settings: settings, positions: positions));
 }
 
 class QuranReaderApp extends StatefulWidget {
-  const QuranReaderApp({super.key, required this.settings});
+  const QuranReaderApp({
+    super.key,
+    required this.settings,
+    required this.positions,
+  });
 
   final SettingsController settings;
+  final ReadingPositionStore positions;
 
   @override
   State<QuranReaderApp> createState() => _QuranReaderAppState();
@@ -38,7 +45,7 @@ class _QuranReaderAppState extends State<QuranReaderApp> {
           themeMode: widget.settings.themeMode,
           theme: _theme(Brightness.light),
           darkTheme: _theme(Brightness.dark),
-          home: _Loader(repository: _repository),
+          home: _Loader(repository: _repository, positions: widget.positions),
         ),
       ),
     );
@@ -55,9 +62,10 @@ class _QuranReaderAppState extends State<QuranReaderApp> {
 /// Holds the first frame until the repository is ready, and shows why if it
 /// never becomes ready.
 class _Loader extends StatelessWidget {
-  const _Loader({required this.repository});
+  const _Loader({required this.repository, required this.positions});
 
   final Future<QuranRepository> repository;
+  final ReadingPositionStore positions;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +80,10 @@ class _Loader extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        return SurahListScreen(repository: snapshot.data!);
+        return SurahListScreen(
+          repository: snapshot.data!,
+          positions: positions,
+        );
       },
     );
   }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../data/quran_repository.dart';
 import '../settings/settings_controller.dart';
+import '../tajwid/tajwid.dart';
+import '../tajwid/tajwid_style.dart';
 
 /// A short, well-known ayah to preview the Arabic font choices against.
 const _previewAyah = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
@@ -119,6 +121,42 @@ class SettingsScreen extends StatelessWidget {
                   .round(),
               label: settings.arabicFontSize.round().toString(),
               onChanged: (value) => settings.arabicFontSize = value,
+            ),
+          ),
+          const Divider(),
+
+          const _SectionHeader('Tajwid colours'),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              'Arabic is coloured where a rule changes how a letter is '
+              'pronounced. Rules that cannot be decided from the written '
+              'form are left uncoloured.',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 10,
+              children: [
+                for (final rule in TajwidRule.values)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: TajwidPalette.of(context).colorOf(rule),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(tajwidRuleLabel(rule)),
+                    ],
+                  ),
+              ],
             ),
           ),
           const Divider(),
