@@ -69,6 +69,32 @@ iOS forbids `dlopen` of a private dylib, so the binding resolves symbols with
 with `-force_load`. `scripts/build-native.sh` produces that archive when run on
 macOS; the Xcode target still has to be wired up by hand once.
 
+## Launcher icon
+
+`icon.png` at the repo root is the source. It is 1043×1081 with rounded corners
+and transparency already baked in, which no platform can consume directly, so
+two variants are derived into `assets/icon/`:
+
+| File | Why |
+| --- | --- |
+| `icon.png` | Squared to 1081×1081 on transparent padding. Scaling to square instead would distort the rehal. |
+| `icon_ios.png` | Corners filled and the alpha channel dropped, which iOS requires. The fill replicates each row's edge colour outward so it tracks the icon's vertical gradient; a flat fill bands against it. |
+
+Regenerate the platform icons with `dart run flutter_launcher_icons` after
+changing either. The derivation itself is a one-off — re-run the snippet in the
+commit that added them if the source art changes shape.
+
+- **Android** — adaptive icon, full-bleed foreground over `#10382C` (sampled
+  from the icon's own border). `ic_launcher.xml` insets the foreground by 16%,
+  which lands it on the 72dp safe zone; do not pre-inset the source as well.
+- **iOS** — alpha-free 1024×1024 and the full density set.
+- **Linux** — `flutter_launcher_icons` has no Linux target, so
+  [my_application.cc](linux/runner/my_application.cc) sets the GTK window icon
+  from the copy CMake installs at `data/icon.png`. For a dock or menu entry,
+  install [quran-reader.desktop](linux/packaging/quran-reader.desktop) into
+  `~/.local/share/applications/` and the icon into
+  `~/.local/share/icons/hicolor/512x512/apps/quran-reader.png`.
+
 ## License
 
 Copyright (C) 2026 Mazhar

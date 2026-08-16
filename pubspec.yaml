@@ -85,11 +85,12 @@ flutter_launcher_icons:
 
   android: true
   min_sdk_android: 21
-  # Adaptive layers: the art is inset in the foreground because the launcher
-  # mask only guarantees the inner ~66%, and the background matches the green
-  # of the icon's own border.
+  # Adaptive layers. The foreground is the full-bleed art: the generated
+  # ic_launcher.xml already insets it by 16%, which lands it on the 72dp safe
+  # zone. Pre-insetting it here as well would shrink it to about half the
+  # visible circle. The background matches the green of the icon's own border.
   adaptive_icon_background: "#10382C"
-  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  adaptive_icon_foreground: "assets/icon/icon.png"
 
   ios: true
   # iOS rejects an alpha channel and applies its own corner mask, so it gets

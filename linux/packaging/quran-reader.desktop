@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Quran Reader
+Comment=Read the Quran in Arabic, with or without English
+Categories=Education;Literature;
+Terminal=false
+Exec=quran_reader
+Icon=quran-reader
+# Matches the WM_CLASS the GTK runner sets, so a running window is associated
+# with this entry rather than showing a generic icon.
+StartupWMClass=quran.mazhar.fi
