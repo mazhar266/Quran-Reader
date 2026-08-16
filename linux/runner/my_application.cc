@@ -61,7 +61,10 @@ static void my_application_activate(GApplication* application) {
     g_autofree gchar* exe_dir = g_path_get_dirname(exe_path);
     g_autofree gchar* icon_path =
         g_build_filename(exe_dir, "data", "icon.png", nullptr);
-    gtk_window_set_icon_from_file(window, icon_path, nullptr);
+    g_autoptr(GError) icon_error = nullptr;
+    if (!gtk_window_set_icon_from_file(window, icon_path, &icon_error)) {
+      g_warning("icon %s: %s", icon_path, icon_error->message);
+    }
   }
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
