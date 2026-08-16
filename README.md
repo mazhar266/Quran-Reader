@@ -14,11 +14,55 @@ library — the app holds no scripture of its own.
 | **Normal** | Arabic followed by its English translation, one ayah per block |
 
 Reading mode is therefore a single paragraph for the whole surah, which is why
-it is not a lazy `ListView` — where a line breaks depends on every ayah before
-it. Laying out Al-Baqarah's 286 ayahs costs about 120 ms in a debug build, once,
+it is not a lazy list — where a line breaks depends on every ayah before it.
+Laying out Al-Baqarah's 286 ayahs costs about 120 ms in a debug build, once,
 when the surah opens.
 
 The mode is a persisted setting, and also toggles from the reader's app bar.
+
+## Tajwid colouring
+
+Arabic is coloured wherever a rule changes how a letter is pronounced, in both
+modes. English is never coloured. [tajwid.dart](lib/src/tajwid/tajwid.dart)
+holds the rule engine as pure Dart, and
+[tajwid_style.dart](lib/src/tajwid/tajwid_style.dart) turns its matches into
+spans; the settings page carries a legend of the colours.
+
+Detected: ghunnah, idgham with and without ghunnah, iqlab, ikhfa, idgham and
+ikhfa shafawi, qalqalah, and madd. Anything that cannot be decided from the
+written form is left uncoloured rather than guessed at — izhar is simply the
+absence of a colour, and the two-, four- and six-count madd lengths are not
+separated because the text does not distinguish them.
+
+The engine is driven by the character inventory the bundled text actually uses,
+which is not the textbook one:
+
+- Sukun is usually U+06E1, not U+0652.
+- A noon before idgham or ikhfa is often written **bare**, with no sukun at
+  all, so "sakin" means "carries no vowel" rather than "carries a sukun".
+- Iqlab is written explicitly as U+06E2 or U+06ED, so it is read off the text
+  instead of inferred from a following beh.
+- Madd is always a combining U+0653; the precomposed U+0622 never appears.
+
+Idgham is only applied across a word boundary. A noon followed by yeh or waw
+inside one word is izhar mutlaq, and colouring it as idgham is the mistake a
+boundary-blind rule makes — `test/tajwid_test.dart` pins that case along with
+the rest.
+
+## Resuming
+
+The last ayah in view is recorded as the reader scrolls, and the surah list
+shows a "Continue reading" strip plus a bookmark against that surah; tapping
+either reopens it at that ayah. Only one position is kept — this is "carry on
+where I left off", not a bookmark list.
+
+Finding the ayah in view differs by mode, because the layouts do:
+
+- **Normal** uses `ScrollablePositionedList`, which reports the top item's
+  index and can jump to one. A plain lazy `ListView` can do neither, because
+  items away from the viewport have no known height.
+- **Reading** has no items at all, so it asks the laid-out paragraph which
+  character sits at the top of the viewport and maps that back to an ayah.
 
 ## Settings
 
