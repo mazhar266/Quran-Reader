@@ -28,9 +28,26 @@ class _SurahScreenState extends State<SurahScreen> {
   @override
   void initState() {
     super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(SurahScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Navigating pushes a fresh route, so in practice this only fires if the
+    // same screen is rebuilt pointing at another surah. Without it the text
+    // would stay on the old surah while the title changed.
+    if (widget.surah.number != oldWidget.surah.number) {
+      _load();
+    }
+  }
+
+  void _load() {
     try {
       _ayahs = widget.repository.surah(widget.surah.number);
+      _error = null;
     } on QqlException catch (e) {
+      _ayahs = null;
       _error = e;
     }
   }
@@ -79,6 +96,11 @@ class _SurahScreenState extends State<SurahScreen> {
       return Center(child: Text('Could not load this surah.\n$_error'));
     }
     final ayahs = _ayahs!;
+    final arabicStyle = settings.arabicTextStyle(context);
+
+    if (settings.readingMode == ReadingMode.reading) {
+      return _ContinuousPage(ayahs: ayahs, arabicStyle: arabicStyle);
+    }
 
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -86,22 +108,53 @@ class _SurahScreenState extends State<SurahScreen> {
       separatorBuilder: (_, _) => const Divider(height: 28),
       itemBuilder: (context, index) => _AyahTile(
         ayah: ayahs[index],
-        mode: settings.readingMode,
-        arabicStyle: settings.arabicTextStyle(context),
+        arabicStyle: arabicStyle,
       ),
     );
   }
 }
 
+/// Reading mode: the whole surah set as one running page.
+///
+/// Ayahs are not laid out one per line — each continues from where the last
+/// ended, separated only by its marker, so the text wraps like a mushaf rather
+/// than a list. That means one paragraph for the entire surah, which is also
+/// why this cannot be a lazy ListView: the line breaks depend on every ayah
+/// before it.
+class _ContinuousPage extends StatelessWidget {
+  const _ContinuousPage({required this.ayahs, required this.arabicStyle});
+
+  final List<Ayah> ayahs;
+  final TextStyle arabicStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Text.rich(
+          TextSpan(
+            children: [
+              for (final ayah in ayahs) ...[
+                TextSpan(text: ayah.arabic),
+                _ayahMarker(context, ayah.number),
+              ],
+            ],
+          ),
+          style: arabicStyle,
+          textAlign: TextAlign.justify,
+        ),
+      ),
+    );
+  }
+}
+
+/// Normal mode: one ayah, then its translation.
 class _AyahTile extends StatelessWidget {
-  const _AyahTile({
-    required this.ayah,
-    required this.mode,
-    required this.arabicStyle,
-  });
+  const _AyahTile({required this.ayah, required this.arabicStyle});
 
   final Ayah ayah;
-  final ReadingMode mode;
   final TextStyle arabicStyle;
 
   @override
@@ -117,59 +170,42 @@ class _AyahTile extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(text: ayah.arabic),
-                const TextSpan(text: ' '),
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.middle,
-                  child: _AyahMarker(number: ayah.number),
-                ),
+                _ayahMarker(context, ayah.number),
               ],
             ),
             style: arabicStyle,
             textAlign: TextAlign.justify,
           ),
         ),
-        if (mode == ReadingMode.normal) ...[
-          const SizedBox(height: 12),
-          Text(
-            '${ayah.number}. ${ayah.english}',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  height: 1.5,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-        ],
+        const SizedBox(height: 12),
+        Text(
+          '${ayah.number}. ${ayah.english}',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                height: 1.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
       ],
     );
   }
 
 }
 
-/// The end-of-ayah marker.
+/// The end-of-ayah marker, as a span rather than a widget.
 ///
-/// U+06DD (ARABIC END OF AYAH) is the typographically correct character, but
-/// none of the bundled Quranic faces compose digits inside it — the number
-/// disappears and an empty circle is left behind. Drawing the ring ourselves
-/// and setting the digits in the UI font renders the same idea in any face.
-class _AyahMarker extends StatelessWidget {
-  const _AyahMarker({required this.number});
-
-  final int number;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withValues(alpha: 0.6)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$number',
-        textDirection: TextDirection.ltr,
-        style: TextStyle(fontSize: 12, height: 1.1, color: color),
-      ),
+/// Two constraints shape this. U+06DD (ARABIC END OF AYAH) is the correct
+/// character, but the bundled faces draw it as an empty ring and do not
+/// compose the following digits inside it, so the number vanishes. And a
+/// WidgetSpan cannot stand in for it either: reading mode puts every ayah of
+/// the surah in one RTL paragraph, and Flutter matches multiple placeholders
+/// to their boxes in visual rather than logical order there, which numbers the
+/// ayahs backwards. Ornate parentheses around the number are plain text, so
+/// they order correctly and every bundled face draws them.
+///
+/// The digits are Western rather than Arabic-Indic on purpose: Al Majeed and
+/// PDMS Saleem both list U+0660-0669 in their cmap but map them to blank
+/// glyphs, so the number disappears. All three faces draw 0-9.
+TextSpan _ayahMarker(BuildContext context, int number) => TextSpan(
+      text: ' \uFD3E$number\uFD3F ',
+      style: TextStyle(color: Theme.of(context).colorScheme.primary),
     );
-  }
-}

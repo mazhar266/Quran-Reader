@@ -7,8 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// How much of an ayah to show.
 enum ReadingMode {
-  /// Arabic only — an uninterrupted page of scripture.
-  reading('Reading', 'Arabic only'),
+  /// Arabic only, running on as one continuous page.
+  reading('Reading', 'Arabic only, flowing like a book'),
 
   /// Arabic followed by its English translation, ayah by ayah.
   normal('Normal', 'Arabic with English');

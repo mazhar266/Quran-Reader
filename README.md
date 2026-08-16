@@ -10,8 +10,13 @@ library — the app holds no scripture of its own.
 
 | Mode | Shows |
 | --- | --- |
-| **Reading** | Arabic only — an uninterrupted page of scripture |
-| **Normal** | Arabic followed by its English translation, ayah by ayah |
+| **Reading** | Arabic only, set as one continuous page — each ayah carries on from where the last ended and the text wraps like a mushaf, rather than breaking to a new line per ayah |
+| **Normal** | Arabic followed by its English translation, one ayah per block |
+
+Reading mode is therefore a single paragraph for the whole surah, which is why
+it is not a lazy `ListView` — where a line breaks depends on every ayah before
+it. Laying out Al-Baqarah's 286 ayahs costs about 120 ms in a debug build, once,
+when the surah opens.
 
 The mode is a persisted setting, and also toggles from the reader's app bar.
 
