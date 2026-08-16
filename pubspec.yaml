@@ -49,6 +49,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -73,3 +74,25 @@ flutter:
     - family: PDMSSaleem
       fonts:
         - asset: assets/fonts/PDMSSaleem.ttf
+
+# Launcher icons. Regenerate with:
+#   dart run flutter_launcher_icons
+#
+# The source icon.png is 1043x1081 with baked-in rounded corners, so three
+# variants are derived from it in assets/icon/ (see README).
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+
+  android: true
+  min_sdk_android: 21
+  # Adaptive layers: the art is inset in the foreground because the launcher
+  # mask only guarantees the inner ~66%, and the background matches the green
+  # of the icon's own border.
+  adaptive_icon_background: "#10382C"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+
+  ios: true
+  # iOS rejects an alpha channel and applies its own corner mask, so it gets
+  # the variant whose corners are filled rather than transparent.
+  image_path_ios: "assets/icon/icon_ios.png"
+  remove_alpha_ios: true
