@@ -13,20 +13,17 @@ void main() {
       final settings = await SettingsController.load();
       expect(settings.themeMode.name, 'system');
       expect(settings.readingMode, ReadingMode.normal);
-      expect(settings.arabicFont, ArabicFont.system);
     });
 
     test('restores what was persisted', () async {
       SharedPreferences.setMockInitialValues({
         'theme_mode': 'dark',
         'reading_mode': 'reading',
-        'arabic_font': 'Muhammadi',
         'arabic_font_size': 42.0,
       });
       final settings = await SettingsController.load();
       expect(settings.themeMode.name, 'dark');
       expect(settings.readingMode, ReadingMode.reading);
-      expect(settings.arabicFont.label, 'Muhammadi Quranic');
       expect(settings.arabicFontSize, 42.0);
     });
 
@@ -38,10 +35,11 @@ void main() {
       expect(settings.arabicFontSize, SettingsController.minArabicFontSize);
     });
 
-    test('an unknown persisted font falls back to the system face', () async {
-      SharedPreferences.setMockInitialValues({'arabic_font': 'Removed'});
+    test('a font left over from the old picker is ignored', () async {
+      // The picker is gone; there is one bundled face now.
+      SharedPreferences.setMockInitialValues({'arabic_font': 'Muhammadi'});
       final settings = await SettingsController.load();
-      expect(settings.arabicFont, ArabicFont.system);
+      expect(settings.arabicTextStyle, isNotNull);
     });
 
     test('notifies only on a real change', () async {

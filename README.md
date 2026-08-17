@@ -64,13 +64,31 @@ Finding the ayah in view differs by mode, because the layouts do:
 - **Reading** has no items at all, so it asks the laid-out paragraph which
   character sits at the top of the viewport and maps that back to an ayah.
 
+## The Arabic face
+
+`assets/fonts/UthmanicHafs.ttf` (KFGQPC HAFS Uthmanic Script) is the only
+Arabic font in the app, and there is no font picker — the setting and its
+`arabic_font` preference are gone. English keeps the platform UI font.
+
+It covers every codepoint the bundled text uses except U+2009 THIN SPACE, which
+occurs once in the whole Quran and is a space anyway, and no mapped codepoint
+draws a blank glyph.
+
+It also renders U+0660-0669 as the **ornamented ayah medallions** of a mushaf,
+with the number already inside them. So `ayahMarkerText` is now just the ayah
+number in Arabic-Indic digits — nothing is drawn around it. U+06DD (ARABIC END
+OF AYAH) would add a second, empty circle beside the medallion, and the ornate
+parentheses U+FD3E/FD3F that an earlier font needed are not in this one at all.
+
+The heading in [surah_title.dart](lib/src/screens/surah_title.dart) is ordinary
+Arabic text in the same face — `سُورَة` plus the surah name, with the basmalah
+beneath it, taken verbatim from 1:1 so it sets identically to the page.
+
 ## Settings
 
 - **Theme** — light, dark, or follow the system.
-- **Arabic font** — the system face or one of three bundled Quranic faces
-  (Al Majeed, Muhammadi, PDMS Saleem), with a live preview.
-- **Arabic size** — 18–56 pt. English is deliberately left alone; it follows
-  the platform text scale like the rest of the UI.
+- **Arabic size** — 18–56 pt, with a live preview. English is deliberately
+  left alone; it follows the platform text scale like the rest of the UI.
 
 ## How QQL is wired in
 

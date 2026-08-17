@@ -66,15 +66,12 @@ flutter:
     - assets/surah_index.json
 
   fonts:
-    - family: AlMajeed
+    # The only Arabic face. KFGQPC HAFS Uthmanic Script covers every codepoint
+    # the bundled text uses, and draws U+0660-0669 as the ornamented ayah
+    # medallions rather than as plain numerals — see ayahMarkerText.
+    - family: UthmanicHafs
       fonts:
-        - asset: assets/fonts/AlMajeed.ttf
-    - family: Muhammadi
-      fonts:
-        - asset: assets/fonts/Muhammadi.ttf
-    - family: PDMSSaleem
-      fonts:
-        - asset: assets/fonts/PDMSSaleem.ttf
+        - asset: assets/fonts/UthmanicHafs.ttf
 
 # Launcher icons. Regenerate with:
 #   dart run flutter_launcher_icons

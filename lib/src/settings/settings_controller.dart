@@ -19,28 +19,8 @@ enum ReadingMode {
   final String description;
 }
 
-/// An Arabic typeface the reader can be set to.
-class ArabicFont {
-  const ArabicFont(this.label, this.family);
-
-  final String label;
-
-  /// `null` means the platform's default Arabic face.
-  final String? family;
-
-  static const system = ArabicFont('System default', null);
-
-  /// The faces declared under `fonts:` in pubspec.yaml.
-  static const all = <ArabicFont>[
-    system,
-    ArabicFont('Al Majeed Quranic', 'AlMajeed'),
-    ArabicFont('Muhammadi Quranic', 'Muhammadi'),
-    ArabicFont('PDMS Saleem Quranic', 'PDMSSaleem'),
-  ];
-
-  static ArabicFont byFamily(String? family) =>
-      all.firstWhere((f) => f.family == family, orElse: () => system);
-}
+/// The one bundled Arabic face, as declared in pubspec.yaml.
+const arabicFontFamily = 'UthmanicHafs';
 
 class SettingsController extends ChangeNotifier {
   SettingsController._(this._prefs)
@@ -50,12 +30,10 @@ class SettingsController extends ChangeNotifier {
         _readingMode = ReadingMode.values.byName(
           _prefs.getString(_kReadingMode) ?? ReadingMode.normal.name,
         ),
-        _arabicFont = ArabicFont.byFamily(_prefs.getString(_kArabicFont)),
         _arabicFontSize = _prefs.getDouble(_kArabicFontSize) ?? 28;
 
   static const _kThemeMode = 'theme_mode';
   static const _kReadingMode = 'reading_mode';
-  static const _kArabicFont = 'arabic_font';
   static const _kArabicFontSize = 'arabic_font_size';
 
   /// Bounds for the Arabic size slider. English text is left alone — it
@@ -70,12 +48,10 @@ class SettingsController extends ChangeNotifier {
 
   ThemeMode _themeMode;
   ReadingMode _readingMode;
-  ArabicFont _arabicFont;
   double _arabicFontSize;
 
   ThemeMode get themeMode => _themeMode;
   ReadingMode get readingMode => _readingMode;
-  ArabicFont get arabicFont => _arabicFont;
   double get arabicFontSize => _arabicFontSize;
 
   set themeMode(ThemeMode value) {
@@ -92,17 +68,6 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  set arabicFont(ArabicFont value) {
-    if (value.family == _arabicFont.family) return;
-    _arabicFont = value;
-    if (value.family == null) {
-      _prefs.remove(_kArabicFont);
-    } else {
-      _prefs.setString(_kArabicFont, value.family!);
-    }
-    notifyListeners();
-  }
-
   set arabicFontSize(double value) {
     final clamped = value.clamp(minArabicFontSize, maxArabicFontSize);
     if (clamped == _arabicFontSize) return;
@@ -113,7 +78,7 @@ class SettingsController extends ChangeNotifier {
 
   /// The text style every Arabic ayah is rendered with.
   TextStyle arabicTextStyle(BuildContext context) => TextStyle(
-        fontFamily: _arabicFont.family,
+        fontFamily: arabicFontFamily,
         fontSize: _arabicFontSize,
         // Quranic faces carry tall vowel marks; the default line height
         // clips them.

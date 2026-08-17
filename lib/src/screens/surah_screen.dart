@@ -10,6 +10,7 @@ import '../data/reading_position.dart';
 import '../qql/qql.dart';
 import '../settings/settings_controller.dart';
 import '../tajwid/tajwid_style.dart';
+import 'surah_title.dart';
 
 class SurahScreen extends StatefulWidget {
   const SurahScreen({
@@ -113,23 +114,29 @@ class _SurahScreenState extends State<SurahScreen> {
 
     // Keyed by mode so that switching modes rebuilds the scroller from
     // scratch rather than carrying a meaningless offset across two very
-    // different layouts.
-    if (settings.readingMode == ReadingMode.reading) {
-      return _ContinuousPage(
-        key: const ValueKey('reading'),
-        ayahs: ayahs,
-        arabicStyle: arabicStyle,
-        startAtAyah: widget.startAtAyah,
-        onAyahInView: _onAyahInView,
-      );
-    }
+    // different layouts. The heading stays above both, which also keeps it
+    // clear of the paragraph offsets reading mode measures against.
+    final Widget page = settings.readingMode == ReadingMode.reading
+        ? _ContinuousPage(
+            key: const ValueKey('reading'),
+            ayahs: ayahs,
+            arabicStyle: arabicStyle,
+            startAtAyah: widget.startAtAyah,
+            onAyahInView: _onAyahInView,
+          )
+        : _AyahList(
+            key: const ValueKey('normal'),
+            ayahs: ayahs,
+            arabicStyle: arabicStyle,
+            startAtAyah: widget.startAtAyah,
+            onAyahInView: _onAyahInView,
+          );
 
-    return _AyahList(
-      key: const ValueKey('normal'),
-      ayahs: ayahs,
-      arabicStyle: arabicStyle,
-      startAtAyah: widget.startAtAyah,
-      onAyahInView: _onAyahInView,
+    return Column(
+      children: [
+        SurahHeading(surah: widget.surah),
+        Expanded(child: page),
+      ],
     );
   }
 }
@@ -395,20 +402,13 @@ class _AyahTile extends StatelessWidget {
 
 /// The end-of-ayah marker.
 ///
-/// Three constraints shape this. U+06DD (ARABIC END OF AYAH) is the correct
-/// character, but the bundled faces draw it as an empty ring and do not
-/// compose the following digits inside it, so the number vanishes. A
-/// WidgetSpan cannot stand in for it either: reading mode puts every ayah of
-/// the surah in one RTL paragraph, and Flutter matches multiple placeholders
-/// to their boxes in visual rather than logical order there, which numbers the
-/// ayahs backwards.
-///
-/// That leaves ornate parentheses, which every bundled face draws — but they
-/// are bidi-mirrored, so inside an RTL paragraph U+FD3E and U+FD3F swap and
-/// writing them in the obvious order bows them away from the number instead of
-/// enclosing it. Hence U+FD3F first.
-///
-/// The digits are Western rather than Arabic-Indic on purpose: Al Majeed and
-/// PDMS Saleem both list U+0660-0669 in their cmap but map them to blank
-/// glyphs, so the number disappears. All three faces draw 0-9.
-String ayahMarkerText(int number) => ' ﴿$number﴾ ';
+/// KFGQPC HAFS draws U+0660-0669 as the ornamented medallions of a mushaf,
+/// with the number already inside them, so the marker is simply the ayah
+/// number in Arabic-Indic digits. Nothing has to be drawn around it: U+06DD
+/// (ARABIC END OF AYAH) would add a second, empty circle beside it.
+String ayahMarkerText(int number) => ' \u2009${_arabicDigits(number)} ';
+
+String _arabicDigits(int value) => '$value'.replaceAllMapped(
+      RegExp(r'\d'),
+      (m) => String.fromCharCode(0x0660 + int.parse(m[0]!)),
+    );

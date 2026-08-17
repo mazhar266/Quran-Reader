@@ -98,7 +98,11 @@ const _qalqalahLetters = {'ق', 'ط', 'ب', 'ج', 'د'};
 /// the rule that spans it.
 bool _isMark(String ch) {
   final c = ch.codeUnitAt(0);
-  return (c >= 0x064B && c <= 0x0670) ||
+  // 0x064B-0x065F are the vowel and tanween marks; U+0670 is the superscript
+  // alef. The gap between them is Arabic-Indic digits and separators, which
+  // are not marks — the ayah numbers are set in those.
+  return (c >= 0x064B && c <= 0x065F) ||
+      c == 0x0670 ||
       (c >= 0x06D6 && c <= 0x06ED) ||
       c == 0x0640; // tatweel, a stretching glyph rather than a letter
 }

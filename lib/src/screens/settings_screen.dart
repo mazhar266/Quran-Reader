@@ -92,20 +92,6 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          RadioGroup<String?>(
-            groupValue: settings.arabicFont.family,
-            onChanged: (family) =>
-                settings.arabicFont = ArabicFont.byFamily(family),
-            child: Column(
-              children: [
-                for (final font in ArabicFont.all)
-                  RadioListTile<String?>(
-                    value: font.family,
-                    title: Text(font.label),
-                  ),
-              ],
-            ),
-          ),
           ListTile(
             title: const Text('Size'),
             trailing: Text(settings.arabicFontSize.round().toString()),
