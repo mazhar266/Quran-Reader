@@ -165,9 +165,20 @@ Regenerate the platform icons with `dart run flutter_launcher_icons` after
 changing either. The derivation itself is a one-off — re-run the snippet in the
 commit that added them if the source art changes shape.
 
-- **Android** — adaptive icon, full-bleed foreground over `#10382C` (sampled
-  from the icon's own border). `ic_launcher.xml` insets the foreground by 16%,
-  which lands it on the 72dp safe zone; do not pre-inset the source as well.
+- **Android** — adaptive icon, full-bleed foreground over a **transparent**
+  background (`assets/icon/icon_transparent.png`). `ic_launcher.xml` insets the
+  foreground by 16%, which lands it on the 72dp safe zone; do not pre-inset the
+  source as well.
+
+  The background must not be a colour. The artwork is a self-contained badge
+  with its own rounded corners, and a solid background layer paints behind
+  those corners — and since the adaptive icon always wins over the legacy
+  mipmap on Android 8+, the icon loses its shape and reads as a plain filled
+  tile. The legacy `mipmap/ic_launcher.png` keeps its transparency either way,
+  which is why this is invisible until you look at the composited layers.
+
+  A launcher that forces a circular mask still renders a circle; the mask is
+  the launcher's choice and no icon can opt out of it.
 - **iOS** — alpha-free 1024×1024 and the full density set.
 - **Linux** — `flutter_launcher_icons` has no Linux target, so
   [my_application.cc](linux/runner/my_application.cc) sets the GTK window icon
