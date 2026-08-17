@@ -6,6 +6,7 @@ import '../data/quran_repository.dart';
 import '../settings/settings_controller.dart';
 import '../tajwid/tajwid.dart';
 import '../tajwid/tajwid_style.dart';
+import 'about_screen.dart';
 
 /// A short, well-known ayah to preview the Arabic font choices against.
 const _previewAyah = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
@@ -147,15 +148,16 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(),
 
-          AboutListTile(
-            icon: const Icon(Icons.info_outline),
-            applicationName: 'Quran Reader',
-            applicationLegalese: 'GPL-3.0-or-later',
-            aboutBoxChildren: [
-              const SizedBox(height: 12),
-              Text('Text resolved by QQL ${repository.engineVersion}.'),
-            ],
-            child: const Text('About'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('About'),
+            subtitle: const Text('Credits, sources and licence'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => AboutScreen(engineVersion: repository.engineVersion),
+              ),
+            ),
           ),
         ],
       ),

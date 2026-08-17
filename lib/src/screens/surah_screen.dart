@@ -12,6 +12,18 @@ import '../settings/settings_controller.dart';
 import '../tajwid/tajwid_style.dart';
 import 'surah_title.dart';
 
+/// A request to bring an ayah to the top of the view.
+///
+/// [seq] distinguishes two requests for the same ayah, so asking again for the
+/// ayah you are already looking at still scrolls there.
+@immutable
+class AyahJump {
+  const AyahJump(this.ayah, this.seq);
+
+  final int ayah;
+  final int seq;
+}
+
 class SurahScreen extends StatefulWidget {
   const SurahScreen({
     super.key,
@@ -36,10 +48,18 @@ class _SurahScreenState extends State<SurahScreen> {
   List<Ayah>? _ayahs;
   Object? _error;
 
+  /// Where to scroll next. Seeded from the resume position, then replaced
+  /// whenever the reader asks to jump.
+  AyahJump? _jump;
+  var _jumpSeq = 0;
+
   @override
   void initState() {
     super.initState();
     _load();
+    if (widget.startAtAyah != null) {
+      _jump = AyahJump(widget.startAtAyah!, _jumpSeq);
+    }
   }
 
   @override
@@ -66,6 +86,15 @@ class _SurahScreenState extends State<SurahScreen> {
   void _onAyahInView(int ayah) =>
       widget.positions.record(widget.surah.number, ayah);
 
+  Future<void> _promptJump() async {
+    final ayah = await showDialog<int>(
+      context: context,
+      builder: (_) => _JumpDialog(surah: widget.surah),
+    );
+    if (ayah == null || !mounted) return;
+    setState(() => _jump = AyahJump(ayah, ++_jumpSeq));
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = SettingsScope.of(context);
@@ -83,6 +112,14 @@ class _SurahScreenState extends State<SurahScreen> {
           ],
         ),
         actions: [
+          // Dragging a scrollbar is not a gesture a phone offers, and a long
+          // surah is thousands of lines, so reaching an ayah is a jump rather
+          // than a scroll.
+          IconButton(
+            icon: const Icon(Icons.numbers),
+            tooltip: 'Go to ayah',
+            onPressed: _ayahs == null ? null : _promptJump,
+          ),
           // The mode is a global setting, but flipping it is the single most
           // common thing to do while reading, so it also lives up here.
           IconButton(
@@ -121,14 +158,14 @@ class _SurahScreenState extends State<SurahScreen> {
             key: const ValueKey('reading'),
             ayahs: ayahs,
             arabicStyle: arabicStyle,
-            startAtAyah: widget.startAtAyah,
+            jump: _jump,
             onAyahInView: _onAyahInView,
           )
         : _AyahList(
             key: const ValueKey('normal'),
             ayahs: ayahs,
             arabicStyle: arabicStyle,
-            startAtAyah: widget.startAtAyah,
+            jump: _jump,
             onAyahInView: _onAyahInView,
           );
 
@@ -152,13 +189,13 @@ class _AyahList extends StatefulWidget {
     super.key,
     required this.ayahs,
     required this.arabicStyle,
-    required this.startAtAyah,
+    required this.jump,
     required this.onAyahInView,
   });
 
   final List<Ayah> ayahs;
   final TextStyle arabicStyle;
-  final int? startAtAyah;
+  final AyahJump? jump;
   final ValueChanged<int> onAyahInView;
 
   @override
@@ -167,12 +204,32 @@ class _AyahList extends StatefulWidget {
 
 class _AyahListState extends State<_AyahList> {
   final _positions = ItemPositionsListener.create();
+  final _scroll = ItemScrollController();
 
   @override
   void initState() {
     super.initState();
     _positions.itemPositions.addListener(_report);
   }
+
+  @override
+  void didUpdateWidget(_AyahList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final jump = widget.jump;
+    // The initial position is handled by initialScrollIndex; this is for the
+    // jumps that come afterwards.
+    if (jump != null && jump.seq != oldWidget.jump?.seq && _scroll.isAttached) {
+      _scroll.scrollTo(
+        index: _indexOf(jump.ayah),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  int _indexOf(int ayah) => widget.ayahs
+      .indexWhere((a) => a.number == ayah)
+      .clamp(0, widget.ayahs.length - 1);
 
   @override
   void dispose() {
@@ -196,15 +253,10 @@ class _AyahListState extends State<_AyahList> {
 
   @override
   Widget build(BuildContext context) {
-    final initial = widget.startAtAyah == null
-        ? 0
-        : widget.ayahs
-            .indexWhere((a) => a.number == widget.startAtAyah)
-            .clamp(0, widget.ayahs.length - 1);
-
     return ScrollablePositionedList.separated(
       itemPositionsListener: _positions,
-      initialScrollIndex: initial,
+      itemScrollController: _scroll,
+      initialScrollIndex: widget.jump == null ? 0 : _indexOf(widget.jump!.ayah),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       itemCount: widget.ayahs.length,
       separatorBuilder: (_, _) => const Divider(height: 28),
@@ -232,13 +284,13 @@ class _ContinuousPage extends StatefulWidget {
     super.key,
     required this.ayahs,
     required this.arabicStyle,
-    required this.startAtAyah,
+    required this.jump,
     required this.onAyahInView,
   });
 
   final List<Ayah> ayahs;
   final TextStyle arabicStyle;
-  final int? startAtAyah;
+  final AyahJump? jump;
   final ValueChanged<int> onAyahInView;
 
   @override
@@ -257,8 +309,19 @@ class _ContinuousPageState extends State<_ContinuousPage> {
   void initState() {
     super.initState();
     _scroll.addListener(_report);
-    if (widget.startAtAyah != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _jumpToStart());
+    if (widget.jump != null) {
+      // The paragraph has to be laid out before an ayah has a position.
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _scrollTo(widget.jump!.ayah));
+    }
+  }
+
+  @override
+  void didUpdateWidget(_ContinuousPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final jump = widget.jump;
+    if (jump != null && jump.seq != oldWidget.jump?.seq) {
+      _scrollTo(jump.ayah, animate: true);
     }
   }
 
@@ -278,19 +341,30 @@ class _ContinuousPageState extends State<_ContinuousPage> {
     return object is RenderParagraph ? object : null;
   }
 
-  void _jumpToStart() {
-    final index = widget.ayahs.indexWhere((a) => a.number == widget.startAtAyah);
+  /// Put the line [ayah] starts on at the top of the viewport.
+  void _scrollTo(int ayah, {bool animate = false}) {
+    final index = widget.ayahs.indexWhere((a) => a.number == ayah);
     final paragraph = _paragraph;
     if (index < 0 || paragraph == null || index >= _ayahStarts.length) return;
+    if (!_scroll.hasClients) return;
 
+    // Where that ayah's first character sits within the paragraph.
     final caret = paragraph.getOffsetForCaret(
       TextPosition(offset: _ayahStarts[index]),
       Rect.zero,
     );
-    if (!_scroll.hasClients) return;
-    _scroll.jumpTo(
-      (caret.dy + _topPadding).clamp(0.0, _scroll.position.maxScrollExtent),
-    );
+    final target = (caret.dy + _topPadding)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
+
+    if (animate) {
+      _scroll.animateTo(
+        target,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scroll.jumpTo(target);
+    }
   }
 
   void _report() {
@@ -412,3 +486,61 @@ String _arabicDigits(int value) => '$value'.replaceAllMapped(
       RegExp(r'\d'),
       (m) => String.fromCharCode(0x0660 + int.parse(m[0]!)),
     );
+
+/// Asks which ayah to go to.
+class _JumpDialog extends StatefulWidget {
+  const _JumpDialog({required this.surah});
+
+  final Surah surah;
+
+  @override
+  State<_JumpDialog> createState() => _JumpDialogState();
+}
+
+class _JumpDialogState extends State<_JumpDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final ayah = int.tryParse(_controller.text.trim());
+    if (ayah == null || ayah < 1 || ayah > widget.surah.ayahCount) {
+      setState(() => _error = 'Enter 1 to ${widget.surah.ayahCount}');
+      return;
+    }
+    Navigator.of(context).pop(ayah);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Go to ayah'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.go,
+        onSubmitted: (_) => _submit(),
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
+        decoration: InputDecoration(
+          labelText: '${widget.surah.nameEnglish} · 1–${widget.surah.ayahCount}',
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Go')),
+      ],
+    );
+  }
+}

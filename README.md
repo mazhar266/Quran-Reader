@@ -84,11 +84,25 @@ The heading in [surah_title.dart](lib/src/screens/surah_title.dart) is ordinary
 Arabic text in the same face — `سُورَة` plus the surah name, with the basmalah
 beneath it, taken verbatim from 1:1 so it sets identically to the page.
 
+## Getting to an ayah
+
+A long surah is thousands of lines and a phone has no scrollbar to drag, so
+the reader's app bar carries a **Go to ayah** action: enter a number within the
+surah and both modes scroll straight to it. `AyahJump` carries a sequence
+number alongside the ayah so that asking again for the ayah you are already on
+still scrolls, rather than being ignored as an unchanged value.
+
+The same mechanism seeds the opening position when resuming.
+
 ## Settings
 
 - **Theme** — light, dark, or follow the system.
 - **Arabic size** — 18–56 pt, with a live preview. English is deliberately
   left alone; it follows the platform text scale like the rest of the UI.
+- **About** — credits, sources and licence, on its own page.
+
+Attribution on the About page is a licence obligation for the bundled text, not
+decoration: `test/about_screen_test.dart` asserts the credits are present.
 
 ## How QQL is wired in
 
