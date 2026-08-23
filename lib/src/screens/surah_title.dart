@@ -9,7 +9,7 @@ import '../settings/settings_controller.dart';
 
 /// The basmalah, in the same Uthmani orthography as the ayah text — this is
 /// 1:1 verbatim, so it sets identically to the rest of the page.
-const _basmalah = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
+const _basmalah = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
 
 /// "سورة", the word that precedes the name in a mushaf heading.
 const _surahWord = 'سُورَة';
@@ -27,6 +27,7 @@ class SurahHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.onSurface;
+    final family = SettingsScope.of(context).arabicFont.family;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
@@ -39,7 +40,7 @@ class SurahHeading extends StatelessWidget {
               child: Text(
                 '$_surahWord ${surah.nameArabic}',
                 style: TextStyle(
-                  fontFamily: arabicFontFamily,
+                  fontFamily: family,
                   fontSize: 30,
                   height: 1.6,
                   color: color,
@@ -52,7 +53,7 @@ class SurahHeading extends StatelessWidget {
                 child: Text(
                   _basmalah,
                   style: TextStyle(
-                    fontFamily: arabicFontFamily,
+                    fontFamily: family,
                     fontSize: 24,
                     height: 1.8,
                     color: color,

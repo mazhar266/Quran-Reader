@@ -26,7 +26,7 @@ void main() {
     });
 
     test('a plain noon is not ghunnah', () {
-      expect(rulesIn('نَعۡبُدُ'), isNot(contains(TajwidRule.ghunnah)));
+      expect(rulesIn('نَعْبُدُ'), isNot(contains(TajwidRule.ghunnah)));
     });
   });
 
@@ -40,25 +40,25 @@ void main() {
     });
 
     test('idgham without ghunnah before reh', () {
-      // مِّن رَّبِّهِمۡ (2:5)
+      // مِّن رَّبِّهِمْ (2:5)
       expect(
-        rulesIn('مِّن رَّبِّهِمۡ'),
+        rulesIn('مِّن رَّبِّهِمْ'),
         contains(TajwidRule.idghamWithoutGhunnah),
       );
     });
 
     test('noon then yeh inside one word is izhar, not idgham', () {
-      // ٱلدُّنۡيَا — the classic izhar mutlaq case. Colouring this as idgham
+      // ٱلدُّنْيَا — the classic izhar mutlaq case. Colouring this as idgham
       // is the mistake a word-boundary-blind rule makes.
       expect(
-        rulesIn('ٱلدُّنۡيَا'),
+        rulesIn('ٱلدُّنْيَا'),
         isNot(contains(TajwidRule.idghamWithGhunnah)),
       );
     });
 
     test('ikhfa before feh', () {
-      // أَنفُسَهُمۡ (2:9)
-      expect(rulesIn('أَنفُسَهُمۡ'), contains(TajwidRule.ikhfa));
+      // أَنفُسَهُمْ (2:9)
+      expect(rulesIn('أَنفُسَهُمْ'), contains(TajwidRule.ikhfa));
     });
 
     test('iqlab is read from the written sign', () {
@@ -67,8 +67,8 @@ void main() {
     });
 
     test('izhar letters are left uncoloured', () {
-      // مِنۡ هَادٍ — noon sakinah before heh is izhar.
-      final rules = rulesIn('مِنۡ هَادٍ');
+      // مِنْ هَادٍ — noon sakinah before heh is izhar.
+      final rules = rulesIn('مِنْ هَادٍ');
       expect(rules, isNot(contains(TajwidRule.ikhfa)));
       expect(rules, isNot(contains(TajwidRule.idghamWithGhunnah)));
     });
@@ -76,19 +76,19 @@ void main() {
 
   group('meem sakinah', () {
     test('idgham shafawi before another meem', () {
-      expect(rulesIn('لَهُمۡ مَّا'), contains(TajwidRule.idghamShafawi));
+      expect(rulesIn('لَهُمْ مَّا'), contains(TajwidRule.idghamShafawi));
     });
 
     test('ikhfa shafawi before beh', () {
-      expect(rulesIn('هُمۡ بِهِۦ'), contains(TajwidRule.ikhfaShafawi));
+      expect(rulesIn('هُمْ بِهِۦ'), contains(TajwidRule.ikhfaShafawi));
     });
   });
 
   group('qalqalah', () {
     test('qaf with sukun', () {
-      // رَزَقۡنَٰهُمۡ (2:3)
-      expect(rulesIn('رَزَقۡنَٰ'), contains(TajwidRule.qalqalah));
-      expect(matchedText('رَزَقۡنَٰ', TajwidRule.qalqalah).first, startsWith('ق'));
+      // رَزَقْنَٰهُمْ (2:3)
+      expect(rulesIn('رَزَقْنَٰ'), contains(TajwidRule.qalqalah));
+      expect(matchedText('رَزَقْنَٰ', TajwidRule.qalqalah).first, startsWith('ق'));
     });
 
     test('a vowelled qalqalah letter is not qalqalah', () {
@@ -109,8 +109,19 @@ void main() {
     });
   });
 
+  group('silent letters', () {
+    test('a letter marked with the small high rounded zero is skipped', () {
+      // U+06DF marks a letter that is written but not pronounced, so no rule
+      // may fire on it. In 2:5 the alef of أُو۟لَٰٓئِكَ carries it.
+      const silentAlef = '\u0623\u064F\u0648\u06DF\u0644\u064E\u0670';
+      expect(analyzeTajwid(silentAlef).where(
+          (m) => silentAlef.substring(m.start, m.end).startsWith('\u0648')),
+          isEmpty);
+    });
+  });
+
   group('span integrity', () {
-    const ayah = 'ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ';
+    const ayah = 'ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ';
 
     test('matches never overlap and stay in order', () {
       final matches = analyzeTajwid(ayah);

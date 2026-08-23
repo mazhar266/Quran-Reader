@@ -62,16 +62,39 @@ flutter:
   assets:
     # Unpacked at first launch into the app support directory, because QQL
     # reads its data from real files on disk.
-    - assets/qqldata/quran-json-arabic/dist/chapters/en/
+    - assets/qqldata/quran/chapters/
+    - assets/qqldata/quran/TANZIL-LICENSE.txt
     - assets/surah_index.json
 
   fonts:
-    # The only Arabic face. KFGQPC HAFS Uthmanic Script covers every codepoint
-    # the bundled text uses, and draws U+0660-0669 as the ornamented ayah
-    # medallions rather than as plain numerals — see ayahMarkerText.
+    # Quranic faces offered by the Arabic-font setting. UthmanicHafs is the
+    # default and also draws every ayah medallion, whichever face is selected —
+    # see ayahMarkerText, because several of these map U+0660-0669 to blank
+    # glyphs and the number would vanish.
     - family: UthmanicHafs
       fonts:
         - asset: assets/fonts/UthmanicHafs.ttf
+    - family: QpcHafs
+      fonts:
+        - asset: assets/fonts/QpcHafs.ttf
+    - family: AlMajeed
+      fonts:
+        - asset: assets/fonts/AlMajeed.ttf
+    - family: AlMushaf
+      fonts:
+        - asset: assets/fonts/AlMushaf.ttf
+    - family: IndoPak
+      fonts:
+        - asset: assets/fonts/IndoPak.ttf
+    - family: AmiriQuran
+      fonts:
+        - asset: assets/fonts/AmiriQuran.ttf
+    - family: Muhammadi
+      fonts:
+        - asset: assets/fonts/Muhammadi.ttf
+    - family: PDMSSaleem
+      fonts:
+        - asset: assets/fonts/PDMSSaleem.ttf
 
 # Launcher icons. Regenerate with:
 #   dart run flutter_launcher_icons

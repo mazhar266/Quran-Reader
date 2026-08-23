@@ -36,8 +36,8 @@ void main() {
     await pump(tester);
     // Attribution is a licence obligation for the text data, not decoration.
     expect(find.textContaining('QQL 0.1.0'), findsOneWidget);
-    expect(find.textContaining('Risan Bagja Pradana'), findsOneWidget);
-    expect(find.textContaining('KFGQPC HAFS'), findsOneWidget);
+    expect(find.textContaining('Tanzil Project'), findsOneWidget);
+    expect(find.textContaining('King Fahd'), findsOneWidget);
     expect(find.textContaining('GNU General Public Licence'), findsOneWidget);
   });
 }

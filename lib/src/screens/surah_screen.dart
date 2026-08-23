@@ -408,7 +408,13 @@ class _ContinuousPageState extends State<_ContinuousPage> {
         spans.add(span);
       }
       final marker = ayahMarkerText(ayah.number);
-      spans.add(TextSpan(text: marker, style: TextStyle(color: markerColor)));
+      spans.add(TextSpan(
+        text: marker,
+        style: TextStyle(
+          fontFamily: medallionFontFamily,
+          color: markerColor,
+        ),
+      ));
       chars += ayah.arabic.length + marker.length;
     }
     _ayahStarts = starts;
@@ -452,6 +458,7 @@ class _AyahTile extends StatelessWidget {
                 TextSpan(
                   text: ayahMarkerText(ayah.number),
                   style: TextStyle(
+                    fontFamily: medallionFontFamily,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
@@ -480,6 +487,10 @@ class _AyahTile extends StatelessWidget {
 /// with the number already inside them, so the marker is simply the ayah
 /// number in Arabic-Indic digits. Nothing has to be drawn around it: U+06DD
 /// (ARABIC END OF AYAH) would add a second, empty circle beside it.
+///
+/// The span is pinned to that face rather than the reader's chosen one,
+/// because several of the bundled fonts map those digits to blank glyphs and
+/// the number would simply disappear.
 String ayahMarkerText(int number) => ' \u2009${_arabicDigits(number)} ';
 
 String _arabicDigits(int value) => '$value'.replaceAllMapped(

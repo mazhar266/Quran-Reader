@@ -37,7 +37,10 @@ separated because the text does not distinguish them.
 The engine is driven by the character inventory the bundled text actually uses,
 which is not the textbook one:
 
-- Sukun is usually U+06E1, not U+0652.
+- Sukun is U+0652. An older revision of the dataset used U+06E1 instead, and
+  both are still accepted.
+- A letter carrying U+06DF (small high rounded zero) is written but not
+  pronounced, so no rule fires on it.
 - A noon before idgham or ikhfa is often written **bare**, with no sukun at
   all, so "sakin" means "carries no vowel" rather than "carries a sukun".
 - Iqlab is written explicitly as U+06E2 or U+06ED, so it is read off the text
@@ -64,21 +67,24 @@ Finding the ayah in view differs by mode, because the layouts do:
 - **Reading** has no items at all, so it asks the laid-out paragraph which
   character sits at the top of the viewport and maps that back to an ayah.
 
-## The Arabic face
+## Arabic faces
 
-`assets/fonts/UthmanicHafs.ttf` (KFGQPC HAFS Uthmanic Script) is the only
-Arabic font in the app, and there is no font picker — the setting and its
-`arabic_font` preference are gone. English keeps the platform UI font.
+Eight Quranic faces are bundled and chosen under Settings, Arabic text, each
+listed beside a sample set in itself. `UthmanicHafs` is the default.
 
-It covers every codepoint the bundled text uses except U+2009 THIN SPACE, which
-occurs once in the whole Quran and is a space anyway, and no mapped codepoint
-draws a blank glyph.
+Every one covers the bundled text, but they differ elsewhere, and one of those
+differences is load-bearing: **several map U+0660-0669 to blank glyphs**. Those
+codepoints are the ayah numbers, and `UthmanicHafs` draws them as the
+ornamented mushaf medallions with the number already inside. So the marker span
+is pinned to `medallionFontFamily` rather than the selected face — otherwise
+picking PDMS Saleem or Al Majeed would make every ayah number vanish.
 
-It also renders U+0660-0669 as the **ornamented ayah medallions** of a mushaf,
-with the number already inside them. So `ayahMarkerText` is now just the ayah
-number in Arabic-Indic digits — nothing is drawn around it. U+06DD (ARABIC END
-OF AYAH) would add a second, empty circle beside the medallion, and the ornate
-parentheses U+FD3E/FD3F that an earlier font needed are not in this one at all.
+`ayahMarkerText` is therefore just the number in Arabic-Indic digits, with
+nothing drawn around it. U+06DD (ARABIC END OF AYAH) would add a second, empty
+circle beside the medallion.
+
+Two smaller gaps, both cosmetic and left to font fallback: Al Mushaf has no
+U+06E5 or U+06E9, and AlQuran IndoPak draws U+06DF blank.
 
 The heading in [surah_title.dart](lib/src/screens/surah_title.dart) is ordinary
 Arabic text in the same face — `سُورَة` plus the surah name, with the basmalah
@@ -97,6 +103,8 @@ The same mechanism seeds the opening position when resuming.
 ## Settings
 
 - **Theme** — light, dark, or follow the system.
+- **Arabic font** — one of the eight bundled Quranic faces, each listed beside
+  a sample set in itself.
 - **Arabic size** — 18–56 pt, with a live preview. English is deliberately
   left alone; it follows the platform text scale like the rest of the UI.
 - **About** — credits, sources and licence, on its own page.
@@ -111,14 +119,21 @@ Android and iOS the bundled data lives inside the app package where no such
 path exists. So:
 
 1. The data is bundled under `assets/qqldata/`, mirroring QQ-Lang's `sources/`
-   layout byte for byte.
+   layout byte for byte — currently `quran/chapters/{n}.json`, which is what
+   the resolver expects. That layout has changed before, so re-run
+   `scripts/sync-data.sh` rather than copying by hand.
 2. On first launch [QuranRepository](lib/src/data/quran_repository.dart)
    unpacks it into the app support directory, preserving that layout.
 3. A native context is opened on the unpacked directory and reused for the
    life of the app.
 
 Bump `_dataVersion` in that file whenever the bundled data changes, or existing
-installs will keep their old copy.
+installs will keep their old copy. The dataset has no `index.json`, so
+`scripts/sync-data.sh` derives `assets/surah_index.json` from the chapter files.
+
+The text is **Tanzil Quran Text (Uthmani, v1.1)**, CC BY 3.0. Its terms require
+the source to be named and linked and the text left unmodified, so
+`TANZIL-LICENSE.txt` ships alongside it and the About page carries the credit.
 
 [lib/src/qql/qql.dart](lib/src/qql/qql.dart) is vendored from QQ-Lang's
 `bindings/dart/qql.dart`. The only change is how the library is located per

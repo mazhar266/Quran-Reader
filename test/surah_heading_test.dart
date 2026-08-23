@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quran_reader/src/data/models.dart';
 import 'package:quran_reader/src/screens/surah_title.dart';
+import 'package:quran_reader/src/settings/settings_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// The basmalah as the heading writes it, matching 1:1 of the bundled text.
-const _basmalah = '\u0628\u0650\u0633\u06E1\u0645\u0650\u0020\u0671\u0644\u0644\u0651\u064E\u0647\u0650\u0020\u0671\u0644\u0631\u0651\u064E\u062D\u06E1\u0645\u064E\u0670\u0646\u0650\u0020\u0671\u0644\u0631\u0651\u064E\u062D\u0650\u064A\u0645\u0650';
+const _basmalah = '\u0628\u0650\u0633\u0652\u0645\u0650\u0020\u0671\u0644\u0644\u0651\u064E\u0647\u0650\u0020\u0671\u0644\u0631\u0651\u064E\u062D\u0652\u0645\u064E\u0670\u0646\u0650\u0020\u0671\u0644\u0631\u0651\u064E\u062D\u0650\u064A\u0645\u0650';
 
 Surah _surah(int number, String nameArabic) => Surah(
       number: number,
@@ -17,8 +19,13 @@ Surah _surah(int number, String nameArabic) => Surah(
     );
 
 Future<List<String>> textsOf(WidgetTester tester, Surah surah) async {
+  SharedPreferences.setMockInitialValues({});
+  final settings = await SettingsController.load();
   await tester.pumpWidget(
-    MaterialApp(home: Scaffold(body: SurahHeading(surah: surah))),
+    SettingsScope(
+      controller: settings,
+      child: MaterialApp(home: Scaffold(body: SurahHeading(surah: surah))),
+    ),
   );
   return tester
       .widgetList<Text>(find.byType(Text))

@@ -17,7 +17,7 @@ import '../qql/qql.dart';
 import 'models.dart';
 
 /// Bump when the bundled data changes, to force a re-unpack on upgrade.
-const _dataVersion = 1;
+const _dataVersion = 2;
 
 /// Prefix of the bundled QQL data inside the asset bundle. Everything under it
 /// is unpacked with its relative path preserved.

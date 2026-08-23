@@ -19,8 +19,38 @@ enum ReadingMode {
   final String description;
 }
 
-/// The one bundled Arabic face, as declared in pubspec.yaml.
-const arabicFontFamily = 'UthmanicHafs';
+/// A bundled Quranic typeface the reader can be set to.
+///
+/// Every one of these covers the bundled text, but they differ elsewhere: some
+/// map U+0660-0669 to blank glyphs, which is why the ayah medallions are always
+/// drawn in [medallionFontFamily] rather than in the selected face.
+enum ArabicFont {
+  uthmanicHafs('UthmanicHafs', 'Uthmanic Hafs (KFGQPC)'),
+  qpcHafs('QpcHafs', 'QPC Hafs'),
+  alMajeed('AlMajeed', 'Al Majeed'),
+  alMushaf('AlMushaf', 'Al Mushaf'),
+  indoPak('IndoPak', 'AlQuran IndoPak'),
+  amiri('AmiriQuran', 'Amiri Quran'),
+  muhammadi('Muhammadi', 'Muhammadi'),
+  pdmsSaleem('PDMSSaleem', 'PDMS Saleem');
+
+  const ArabicFont(this.family, this.label);
+
+  /// Family name as declared in pubspec.yaml.
+  final String family;
+  final String label;
+
+  static const fallback = ArabicFont.uthmanicHafs;
+
+  static ArabicFont byFamily(String? family) => values.firstWhere(
+        (f) => f.family == family,
+        orElse: () => fallback,
+      );
+}
+
+/// The face the ayah numbers are set in, whatever the reader has chosen for
+/// the text. It draws U+0660-0669 as the ornamented mushaf medallions.
+const medallionFontFamily = 'UthmanicHafs';
 
 class SettingsController extends ChangeNotifier {
   SettingsController._(this._prefs)
@@ -30,10 +60,12 @@ class SettingsController extends ChangeNotifier {
         _readingMode = ReadingMode.values.byName(
           _prefs.getString(_kReadingMode) ?? ReadingMode.normal.name,
         ),
+        _arabicFont = ArabicFont.byFamily(_prefs.getString(_kArabicFont)),
         _arabicFontSize = _prefs.getDouble(_kArabicFontSize) ?? 28;
 
   static const _kThemeMode = 'theme_mode';
   static const _kReadingMode = 'reading_mode';
+  static const _kArabicFont = 'arabic_font';
   static const _kArabicFontSize = 'arabic_font_size';
 
   /// Bounds for the Arabic size slider. English text is left alone — it
@@ -48,10 +80,12 @@ class SettingsController extends ChangeNotifier {
 
   ThemeMode _themeMode;
   ReadingMode _readingMode;
+  ArabicFont _arabicFont;
   double _arabicFontSize;
 
   ThemeMode get themeMode => _themeMode;
   ReadingMode get readingMode => _readingMode;
+  ArabicFont get arabicFont => _arabicFont;
   double get arabicFontSize => _arabicFontSize;
 
   set themeMode(ThemeMode value) {
@@ -68,6 +102,13 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  set arabicFont(ArabicFont value) {
+    if (value == _arabicFont) return;
+    _arabicFont = value;
+    _prefs.setString(_kArabicFont, value.family);
+    notifyListeners();
+  }
+
   set arabicFontSize(double value) {
     final clamped = value.clamp(minArabicFontSize, maxArabicFontSize);
     if (clamped == _arabicFontSize) return;
@@ -78,7 +119,7 @@ class SettingsController extends ChangeNotifier {
 
   /// The text style every Arabic ayah is rendered with.
   TextStyle arabicTextStyle(BuildContext context) => TextStyle(
-        fontFamily: arabicFontFamily,
+        fontFamily: _arabicFont.family,
         fontSize: _arabicFontSize,
         // Quranic faces carry tall vowel marks; the default line height
         // clips them.

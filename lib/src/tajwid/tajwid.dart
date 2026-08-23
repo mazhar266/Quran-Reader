@@ -7,9 +7,11 @@
 // [TajwidRule] for what is and is not detected.
 //
 // The rules are driven by the character inventory actually used by the bundled
-// text, which matters in two places:
+// text (Tanzil Uthmani), which matters in three places:
 //
-//   * Sukun is usually U+06E1 (SMALL HIGH DOTLESS HEAD OF KHAH), not U+0652.
+//   * Sukun is U+0652.
+//   * A letter carrying U+06DF (SMALL HIGH ROUNDED ZERO) is not pronounced at
+//     all, so no rule may fire on it — and in particular it is not a sukun.
 //   * Iqlab is written explicitly, as U+06E2 or U+06ED, rather than left to be
 //     inferred from a following beh.
 //
@@ -67,7 +69,12 @@ class TajwidMatch {
 
 const _shadda = 'ّ';
 const _maddah = 'ٓ';
-const _sukunSigns = {'ْ', 'ۡ'};
+/// U+0652 is the sukun the current text uses; U+06E1 is the form an older
+/// revision of the dataset wrote, kept so both render the same rules.
+const _sukunSigns = {'\u0652', '\u06E1'};
+
+/// U+06DF over a letter means it is written but not pronounced.
+const _silentSign = '\u06DF';
 const _tanween = {'ً', 'ٌ', 'ٍ'};
 const _iqlabSigns = {'ۢ', 'ۭ'};
 
@@ -124,10 +131,15 @@ class _Unit {
   bool get hasIqlabSign => marks.any(_iqlabSigns.contains);
   bool get hasVowel => marks.any(_vowelSigns.contains);
 
+  /// A letter marked with the small high rounded zero is skipped when
+  /// reciting, so no rule applies to it.
+  bool get isSilent => marks.contains(_silentSign);
+
   /// A letter is sakin when it is marked so, or simply carries no vowel at
   /// all — which is how the bundled text writes the noon before idgham and
   /// ikhfa.
-  bool get isSakin => hasSukun || (!hasVowel && !hasShadda && !hasTanween);
+  bool get isSakin =>
+      !isSilent && (hasSukun || (!hasVowel && !hasShadda && !hasTanween));
 }
 
 List<_Unit> _units(String text) {
@@ -183,6 +195,9 @@ List<TajwidMatch> analyzeTajwid(String text) {
 }
 
 TajwidRule? _ruleFor(_Unit unit, _Unit? next, {required bool acrossWords}) {
+  // An unpronounced letter has no pronunciation to change.
+  if (unit.isSilent) return null;
+
   // Ghunnah and qalqalah are decided by the letter alone, so they come first.
   if ((unit.letter == _noon || unit.letter == _meem) && unit.hasShadda) {
     return TajwidRule.ghunnah;

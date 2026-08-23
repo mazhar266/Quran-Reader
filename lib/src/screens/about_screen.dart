@@ -50,17 +50,23 @@ class AboutScreen extends StatelessWidget {
               'every ayah on screen comes from a Q:<surah> query.'),
           const _Line('github.com/mazhar266/QQ-Lang'),
           const SizedBox(height: 10),
+          // Tanzil's terms require the source to be named and linked, so this
+          // is an obligation rather than a courtesy.
           const _Line(
-            'Text and translation from the quran-json dataset by '
-            'Risan Bagja Pradana.',
+            'Quran text: Tanzil Quran Text (Uthmani, version 1.1), '
+            'Copyright (C) 2007-2026 Tanzil Project, used under Creative '
+            'Commons Attribution 3.0. The text is included verbatim and '
+            'unmodified.',
           ),
-          const _Line('github.com/risan/quran-json'),
+          const _Line('tanzil.net'),
           const Divider(height: 32),
 
-          const _Section('Typeface'),
+          const _Section('Typefaces'),
           const _Line(
-            'KFGQPC HAFS Uthmanic Script, from the King Fahd Glorious Quran '
-            'Printing Complex.',
+            'Uthmanic Hafs and QPC Hafs from the King Fahd Glorious Quran '
+            'Printing Complex; Amiri Quran; Al Majeed, Al Mushaf, AlQuran '
+            'IndoPak, Muhammadi and PDMS Saleem. Choose one under Settings, '
+            'Arabic text.',
           ),
           const Divider(height: 32),
 

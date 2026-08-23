@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quran_reader/src/data/models.dart';
 import 'package:quran_reader/src/settings/settings_controller.dart';
@@ -13,17 +15,20 @@ void main() {
       final settings = await SettingsController.load();
       expect(settings.themeMode.name, 'system');
       expect(settings.readingMode, ReadingMode.normal);
+      expect(settings.arabicFont, ArabicFont.uthmanicHafs);
     });
 
     test('restores what was persisted', () async {
       SharedPreferences.setMockInitialValues({
         'theme_mode': 'dark',
         'reading_mode': 'reading',
+        'arabic_font': 'AmiriQuran',
         'arabic_font_size': 42.0,
       });
       final settings = await SettingsController.load();
       expect(settings.themeMode.name, 'dark');
       expect(settings.readingMode, ReadingMode.reading);
+      expect(settings.arabicFont, ArabicFont.amiri);
       expect(settings.arabicFontSize, 42.0);
     });
 
@@ -35,11 +40,21 @@ void main() {
       expect(settings.arabicFontSize, SettingsController.minArabicFontSize);
     });
 
-    test('a font left over from the old picker is ignored', () async {
-      // The picker is gone; there is one bundled face now.
-      SharedPreferences.setMockInitialValues({'arabic_font': 'Muhammadi'});
+    test('a font that is no longer bundled falls back', () async {
+      SharedPreferences.setMockInitialValues({'arabic_font': 'Removed'});
       final settings = await SettingsController.load();
-      expect(settings.arabicTextStyle, isNotNull);
+      expect(settings.arabicFont, ArabicFont.fallback);
+    });
+
+    test('every offered font is a declared family', () async {
+      // A typo here would silently fall back to the platform font.
+      final declared = File('pubspec.yaml').readAsStringSync();
+      for (final font in ArabicFont.values) {
+        expect(declared, contains('family: ${font.family}'),
+            reason: '${font.label} is not declared in pubspec.yaml');
+        expect(File('assets/fonts/${font.family}.ttf').existsSync(), isTrue,
+            reason: 'assets/fonts/${font.family}.ttf is missing');
+      }
     });
 
     test('notifies only on a real change', () async {

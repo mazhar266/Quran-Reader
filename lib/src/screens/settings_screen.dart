@@ -9,7 +9,11 @@ import '../tajwid/tajwid_style.dart';
 import 'about_screen.dart';
 
 /// A short, well-known ayah to preview the Arabic font choices against.
-const _previewAyah = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
+const _previewAyah = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
+
+/// Set beside each font name, so the list can be read by eye. Short enough to
+/// sit in a list tile: "ٱلْحَمْدُ".
+const _fontSample = '\u0671\u0644\u0652\u062D\u064E\u0645\u0652\u062F\u064F';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.repository});
@@ -91,6 +95,28 @@ class SettingsScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
+            ),
+          ),
+          RadioGroup<ArabicFont>(
+            groupValue: settings.arabicFont,
+            onChanged: (font) => settings.arabicFont = font!,
+            child: Column(
+              children: [
+                for (final font in ArabicFont.values)
+                  RadioListTile<ArabicFont>(
+                    value: font,
+                    title: Text(font.label),
+                    // Each option is set in its own face, so the choice can be
+                    // made by eye rather than by name.
+                    secondary: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Text(
+                        _fontSample,
+                        style: TextStyle(fontFamily: font.family, fontSize: 20),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           ListTile(
