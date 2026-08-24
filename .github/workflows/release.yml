@@ -1,0 +1,79 @@
+# Build release artifacts and attach them to a GitHub Release when a version
+# tag (v1.2.0) is pushed.
+#
+# libqql is vendored as prebuilt binaries (linux/lib, android/.../jniLibs —
+# see scripts/build-native.sh for how they are produced), so CI does not build
+# Rust: it checks out, tests, builds the Flutter bundles, and publishes.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # Manual run from the Actions tab, for re-cutting an existing tag.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Pinned rather than 'stable': pubspec requires Dart ^3.12.2.
+  FLUTTER_VERSION: '3.44.x'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@v4
+
+      - name: Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Dependencies and tests
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+
+      - name: Build APKs (split per ABI)
+        run: flutter build apk --release --split-per-abi --build-name="${GITHUB_REF_NAME#v}" --build-number="${{ github.run_number }}"
+
+      - name: Build the Linux bundle
+        run: flutter build linux --release --build-name="${GITHUB_REF_NAME#v}" --build-number="${{ github.run_number }}"
+
+      - name: Collect artifacts
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          for apk in build/app/outputs/flutter-apk/app-*-release.apk; do
+            abi="$(basename "$apk" | sed 's/app-\(.*\)-release\.apk/\1/')"
+            cp "$apk" "dist/quran-reader_${version}_android-${abi}.apk"
+          done
+          tar -C build/linux/x64/release/bundle \
+            -czf "dist/quran-reader_${version}_linux-x86_64.tar.gz" .
+          ls -la dist
+
+      - name: Publish the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            **Android**: pick the APK for your device (`arm64-v8a` for almost
+            every current phone). Release builds are signed with the debug key
+            until a release signing config is added, so Android may warn about
+            an unknown developer on install.
+
+            **Linux**: unpack the tarball and run `./quran_reader`.

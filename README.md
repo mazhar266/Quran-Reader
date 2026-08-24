@@ -173,6 +173,14 @@ flutter run
 
 Set `QQL_DIR` if your QQ-Lang checkout is not at `~/Projects/QQ Lang`.
 
+### Releasing
+
+Pushing a version tag (`git tag v1.2.0 && git push origin v1.2.0`) runs
+[.github/workflows/release.yml](.github/workflows/release.yml): it uses the
+vendored prebuilt libqql binaries (no Rust in CI), runs the tests, and
+attaches split-per-ABI APKs plus a Linux x86-64 tarball to a GitHub Release
+for that tag. The version number comes from the tag, not pubspec.
+
 ### Platform status
 
 | Platform | Native artifact | State |

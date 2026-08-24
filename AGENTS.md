@@ -68,6 +68,10 @@ scripts/build-native.sh  # build libqql from the QQ-Lang checkout
 scripts/sync-data.sh     # refresh bundled Quran JSON; then bump _dataVersion
 ```
 
+Releasing is CI-driven: pushing a `v*` tag runs `.github/workflows/release.yml`
+(runs the tests, builds with the vendored prebuilt libqql binaries — no Rust in
+CI — and attaches APKs + a Linux tarball to a GitHub Release).
+
 Native artifacts the Flutter build expects:
 
 | Platform | Path |
