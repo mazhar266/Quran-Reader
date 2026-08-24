@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../data/quran_repository.dart';
 import '../data/reading_position.dart';
+import '../mushaf/mushaf_theme.dart';
 import '../settings/settings_controller.dart';
 import 'settings_screen.dart';
 import 'surah_screen.dart';
@@ -99,16 +100,26 @@ class _SurahListScreenState extends State<SurahListScreen> {
                   ),
                 ),
               Expanded(
-                child: ListView.builder(
+                child: ListView.separated(
                   itemCount: surahs.length,
+                  separatorBuilder: (_, _) => const Divider(
+                    height: 1,
+                    indent: 72,
+                    endIndent: 16,
+                  ),
                   itemBuilder: (context, index) {
                     final surah = surahs[index];
                     final isLast = surah.number == last?.surah;
                     return ListTile(
-                      leading: CircleAvatar(child: Text('${surah.number}')),
+                      leading: _NumberMedallion(surah.number),
                       title: Row(
                         children: [
-                          Flexible(child: Text(surah.nameEnglish)),
+                          Flexible(
+                            child: Text(
+                              surah.nameEnglish,
+                              style: const TextStyle(fontFamily: 'serif'),
+                            ),
+                          ),
                           if (isLast) ...[
                             const SizedBox(width: 8),
                             Icon(
@@ -151,6 +162,64 @@ class _SurahListScreenState extends State<SurahListScreen> {
 
   static String _titleCase(String value) =>
       value.isEmpty ? value : value[0].toUpperCase() + value.substring(1);
+}
+
+/// The surah number in the list, set inside a small gilded diamond — the
+/// list's counterpart to the ayah medallions in the text.
+class _NumberMedallion extends StatelessWidget {
+  const _NumberMedallion(this.number);
+
+  final int number;
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: CustomPaint(
+        painter: _MedallionPainter(brightness),
+        child: Center(
+          child: Text(
+            '$number',
+            style: TextStyle(
+              fontSize: 13,
+              color: MushafColors.ink(brightness),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Two concentric diamonds in gold rule.
+class _MedallionPainter extends CustomPainter {
+  const _MedallionPainter(this.brightness);
+
+  final Brightness brightness;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final gold = Paint()
+      ..color = MushafColors.gold(brightness)
+      ..style = PaintingStyle.stroke;
+
+    Path diamond(double radius) => Path()
+      ..moveTo(center.dx, center.dy - radius)
+      ..lineTo(center.dx + radius, center.dy)
+      ..lineTo(center.dx, center.dy + radius)
+      ..lineTo(center.dx - radius, center.dy)
+      ..close();
+
+    final outer = size.shortestSide / 2 - 1;
+    canvas.drawPath(diamond(outer), gold..strokeWidth = 1.4);
+    canvas.drawPath(diamond(outer - 4), gold..strokeWidth = 0.8);
+  }
+
+  @override
+  bool shouldRepaint(_MedallionPainter old) => old.brightness != brightness;
 }
 
 /// The "carry on from where you left off" strip above the list.

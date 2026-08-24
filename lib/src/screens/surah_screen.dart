@@ -7,6 +7,8 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../data/models.dart';
 import '../data/quran_repository.dart';
 import '../data/reading_position.dart';
+import '../mushaf/mushaf_frame.dart';
+import '../mushaf/mushaf_theme.dart';
 import '../qql/qql.dart';
 import '../settings/settings_controller.dart';
 import '../tajwid/tajwid_style.dart';
@@ -169,10 +171,22 @@ class _SurahScreenState extends State<SurahScreen> {
             onAyahInView: _onAyahInView,
           );
 
-    return Column(
+    // The page frame is fixed to the viewport like a real page border, so it
+    // sits behind the column rather than inside either scroller — which also
+    // keeps the reading-mode paragraph measurements independent of it. The
+    // content inset is what clears the rules and their breathing room.
+    return Stack(
       children: [
-        SurahHeading(surah: widget.surah),
-        Expanded(child: page),
+        const Positioned.fill(child: MushafFrame()),
+        Padding(
+          padding: const EdgeInsets.all(MushafFrame.contentInset),
+          child: Column(
+            children: [
+              SurahHeading(surah: widget.surah),
+              Expanded(child: page),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -257,9 +271,10 @@ class _AyahListState extends State<_AyahList> {
       itemPositionsListener: _positions,
       itemScrollController: _scroll,
       initialScrollIndex: widget.jump == null ? 0 : _indexOf(widget.jump!.ayah),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      // The frame's content inset already supplies the page margins.
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
       itemCount: widget.ayahs.length,
-      separatorBuilder: (_, _) => const Divider(height: 28),
+      separatorBuilder: (_, _) => const _AyahSeparator(),
       itemBuilder: (context, index) => _AyahTile(
         ayah: widget.ayahs[index],
         arabicStyle: widget.arabicStyle,
@@ -397,7 +412,8 @@ class _ContinuousPageState extends State<_ContinuousPage> {
   @override
   Widget build(BuildContext context) {
     final palette = TajwidPalette.of(context);
-    final markerColor = Theme.of(context).colorScheme.primary;
+    // Gilded ink for the medallions, as on a tooled page.
+    final markerColor = MushafColors.gold(Theme.of(context).brightness);
 
     final spans = <InlineSpan>[];
     final starts = <int>[];
@@ -421,7 +437,9 @@ class _ContinuousPageState extends State<_ContinuousPage> {
 
     return SingleChildScrollView(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(20, _topPadding, 20, 40),
+      // The frame's content inset supplies the side margins; the top value
+      // stays _topPadding because the scroll math measures against it.
+      padding: const EdgeInsets.fromLTRB(0, _topPadding, 0, 24),
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Text.rich(
@@ -429,6 +447,29 @@ class _ContinuousPageState extends State<_ContinuousPage> {
           key: _paragraphKey,
           style: widget.arabicStyle,
           textAlign: TextAlign.justify,
+        ),
+      ),
+    );
+  }
+}
+
+/// Normal mode: a short centred hairline between ayahs, where a full-width
+/// Divider would cut across the page like a ruled exercise book.
+class _AyahSeparator extends StatelessWidget {
+  const _AyahSeparator();
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return Center(
+      child: Container(
+        width: 96,
+        height: 28,
+        alignment: Alignment.center,
+        child: Container(
+          width: 96,
+          height: 1,
+          color: MushafColors.rule(brightness),
         ),
       ),
     );
@@ -459,7 +500,7 @@ class _AyahTile extends StatelessWidget {
                   text: ayahMarkerText(ayah.number),
                   style: TextStyle(
                     fontFamily: medallionFontFamily,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: MushafColors.gold(Theme.of(context).brightness),
                   ),
                 ),
               ],
@@ -471,7 +512,11 @@ class _AyahTile extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           '${ayah.number}. ${ayah.english}',
+          // Serif for the translation: the page should read as set type, not
+          // as UI chrome. The family is the platform's generic serif — no
+          // bundled font is needed for Latin.
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontFamily: 'serif',
                 height: 1.5,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

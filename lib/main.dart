@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'src/data/quran_repository.dart';
 import 'src/data/reading_position.dart';
+import 'src/mushaf/mushaf_theme.dart';
 import 'src/screens/surah_list_screen.dart';
 import 'src/settings/settings_controller.dart';
 
@@ -43,20 +44,13 @@ class _QuranReaderAppState extends State<QuranReaderApp> {
           title: 'Quran Reader',
           debugShowCheckedModeBanner: false,
           themeMode: widget.settings.themeMode,
-          theme: _theme(Brightness.light),
-          darkTheme: _theme(Brightness.dark),
+          theme: mushafTheme(Brightness.light),
+          darkTheme: mushafTheme(Brightness.dark),
           home: _Loader(repository: _repository, positions: widget.positions),
         ),
       ),
     );
   }
-
-  ThemeData _theme(Brightness brightness) => ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00695C),
-          brightness: brightness,
-        ),
-      );
 }
 
 /// Holds the first frame until the repository is ready, and shows why if it

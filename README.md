@@ -20,6 +20,21 @@ when the surah opens.
 
 The mode is a persisted setting, and also toggles from the reader's app bar.
 
+## Paper mushaf design
+
+The app is themed to read like a printed mushaf: cream paper, sepia ink, and
+antique-gold tooling, with a warm "night paper" dark scheme rather than
+blue-grey. The palette and both `ThemeData`s live in
+[mushaf_theme.dart](lib/src/mushaf/mushaf_theme.dart).
+
+The reader's page border — thin outer rule, heavier inner rule, diamond-and-dot
+corners — is **painted**, not an asset
+([mushaf_frame.dart](lib/src/mushaf/mushaf_frame.dart)), and it is fixed to the
+viewport rather than scrolling with the text, like a real page. The same
+double-rule vocabulary decorates the surah heading's cartouche and the number
+medallions in the surah list. English translations are set in the platform's
+generic serif; Arabic stays in the reader's chosen Quranic face.
+
 ## Tajwid colouring
 
 Arabic is coloured wherever a rule changes how a letter is pronounced, in both
