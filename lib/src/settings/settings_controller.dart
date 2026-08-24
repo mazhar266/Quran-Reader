@@ -19,6 +19,24 @@ enum ReadingMode {
   final String description;
 }
 
+/// The app's theme choices.
+///
+/// Flutter's own [ThemeMode] has no fourth value, and OLED needs one: it is a
+/// dark theme driven to true black, which saves power on OLED screens because
+/// black pixels are simply off. Persisted values from before OLED existed
+/// ('system', 'light', 'dark') still map by name.
+enum AppTheme {
+  system('System', 'Follow the system setting'),
+  light('Light', 'Always daylight paper'),
+  dark('Dark', 'Always night paper'),
+  oled('OLED', 'True black, saves power on OLED screens');
+
+  const AppTheme(this.label, this.description);
+
+  final String label;
+  final String description;
+}
+
 /// A bundled Quranic typeface the reader can be set to.
 ///
 /// Every one of these covers the bundled text, but they differ elsewhere: some
@@ -54,8 +72,8 @@ const medallionFontFamily = 'UthmanicHafs';
 
 class SettingsController extends ChangeNotifier {
   SettingsController._(this._prefs)
-      : _themeMode = ThemeMode.values.byName(
-          _prefs.getString(_kThemeMode) ?? ThemeMode.system.name,
+      : _themeMode = AppTheme.values.byName(
+          _prefs.getString(_kThemeMode) ?? AppTheme.system.name,
         ),
         _readingMode = ReadingMode.values.byName(
           _prefs.getString(_kReadingMode) ?? ReadingMode.normal.name,
@@ -78,17 +96,26 @@ class SettingsController extends ChangeNotifier {
 
   final SharedPreferences _prefs;
 
-  ThemeMode _themeMode;
+  AppTheme _themeMode;
   ReadingMode _readingMode;
   ArabicFont _arabicFont;
   double _arabicFontSize;
 
-  ThemeMode get themeMode => _themeMode;
+  AppTheme get themeMode => _themeMode;
+
+  /// What [AppTheme] means for `MaterialApp.themeMode`. OLED has no
+  /// [ThemeMode] of its own; it is a dark theme driven to true black.
+  ThemeMode get materialThemeMode => switch (_themeMode) {
+        AppTheme.system => ThemeMode.system,
+        AppTheme.light => ThemeMode.light,
+        AppTheme.dark || AppTheme.oled => ThemeMode.dark,
+      };
+
   ReadingMode get readingMode => _readingMode;
   ArabicFont get arabicFont => _arabicFont;
   double get arabicFontSize => _arabicFontSize;
 
-  set themeMode(ThemeMode value) {
+  set themeMode(AppTheme value) {
     if (value == _themeMode) return;
     _themeMode = value;
     _prefs.setString(_kThemeMode, value.name);

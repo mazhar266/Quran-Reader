@@ -43,9 +43,11 @@ class _QuranReaderAppState extends State<QuranReaderApp> {
         builder: (context, _) => MaterialApp(
           title: 'Quran Reader',
           debugShowCheckedModeBanner: false,
-          themeMode: widget.settings.themeMode,
+          themeMode: widget.settings.materialThemeMode,
           theme: mushafTheme(Brightness.light),
-          darkTheme: mushafTheme(Brightness.dark),
+          darkTheme: widget.settings.themeMode == AppTheme.oled
+              ? mushafOledTheme()
+              : mushafTheme(Brightness.dark),
           home: _Loader(repository: _repository, positions: widget.positions),
         ),
       ),

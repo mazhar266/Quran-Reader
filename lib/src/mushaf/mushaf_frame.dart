@@ -4,15 +4,14 @@
 
 import 'package:flutter/material.dart';
 
-import 'mushaf_theme.dart';
-
 /// The ornamental page border of a printed mushaf.
 ///
 /// Drawn, not an asset: it is two rectangles (a thin outer rule, a heavier
 /// inner one) with a diamond-and-dot at each corner, so it costs nothing to
-/// ship and scales to any screen. The interior is filled with the slightly
-/// lighter [MushafColors.page], which is what separates "page" from "margin"
-/// against the scaffold's paper colour.
+/// ship and scales to any screen. The interior is filled with the theme's
+/// page colour (`surfaceContainerHighest`), which is what separates "page"
+/// from "margin" against the scaffold's paper colour — and is why the OLED
+/// theme's true black needs no special casing here.
 ///
 /// The frame hugs the viewport rather than scrolling with the text — a real
 /// page border is fixed to the page, and keeping it outside the scroll view
@@ -35,23 +34,27 @@ class MushafFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+    final scheme = Theme.of(context).colorScheme;
     return CustomPaint(
-      painter: _MushafFramePainter(brightness),
+      painter: _MushafFramePainter(
+        gold: scheme.primary,
+        page: scheme.surfaceContainerHighest,
+      ),
       size: Size.infinite,
     );
   }
 }
 
 class _MushafFramePainter extends CustomPainter {
-  const _MushafFramePainter(this.brightness);
+  const _MushafFramePainter({required this.gold, required this.page});
 
-  final Brightness brightness;
+  final Color gold;
+  final Color page;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final gold = Paint()
-      ..color = MushafColors.gold(brightness)
+    final rule = Paint()
+      ..color = gold
       ..style = PaintingStyle.stroke;
 
     final outer = Rect.fromLTWH(
@@ -60,17 +63,17 @@ class _MushafFramePainter extends CustomPainter {
       size.width - 2 * MushafFrame._margin,
       size.height - 2 * MushafFrame._margin,
     );
-    canvas.drawRect(outer, gold..strokeWidth = MushafFrame._outerStroke);
+    canvas.drawRect(outer, rule..strokeWidth = MushafFrame._outerStroke);
 
     final inner = outer.deflate(
       MushafFrame._outerStroke + MushafFrame._gap + MushafFrame._innerStroke / 2,
     );
-    canvas.drawRect(inner, gold..strokeWidth = MushafFrame._innerStroke);
+    canvas.drawRect(inner, rule..strokeWidth = MushafFrame._innerStroke);
 
     // The page itself.
     canvas.drawRect(
       inner.deflate(MushafFrame._innerStroke / 2),
-      Paint()..color = MushafColors.page(brightness),
+      Paint()..color = page,
     );
 
     // A diamond-and-dot on each corner of the heavier rule, the way a
@@ -83,15 +86,16 @@ class _MushafFramePainter extends CustomPainter {
         ..lineTo(corner.dx, corner.dy + diamondSide)
         ..lineTo(corner.dx - diamondSide, corner.dy)
         ..close();
-      canvas.drawPath(diamond, gold..strokeWidth = MushafFrame._outerStroke);
+      canvas.drawPath(diamond, rule..strokeWidth = MushafFrame._outerStroke);
       canvas.drawCircle(
         corner,
         MushafFrame._outerStroke,
-        Paint()..color = gold.color,
+        Paint()..color = gold,
       );
     }
   }
 
   @override
-  bool shouldRepaint(_MushafFramePainter old) => old.brightness != brightness;
+  bool shouldRepaint(_MushafFramePainter old) =>
+      old.gold != gold || old.page != page;
 }

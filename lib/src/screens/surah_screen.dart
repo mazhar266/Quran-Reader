@@ -8,7 +8,6 @@ import '../data/models.dart';
 import '../data/quran_repository.dart';
 import '../data/reading_position.dart';
 import '../mushaf/mushaf_frame.dart';
-import '../mushaf/mushaf_theme.dart';
 import '../qql/qql.dart';
 import '../settings/settings_controller.dart';
 import '../tajwid/tajwid_style.dart';
@@ -413,7 +412,7 @@ class _ContinuousPageState extends State<_ContinuousPage> {
   Widget build(BuildContext context) {
     final palette = TajwidPalette.of(context);
     // Gilded ink for the medallions, as on a tooled page.
-    final markerColor = MushafColors.gold(Theme.of(context).brightness);
+    final markerColor = Theme.of(context).colorScheme.primary;
 
     final spans = <InlineSpan>[];
     final starts = <int>[];
@@ -460,7 +459,6 @@ class _AyahSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
     return Center(
       child: Container(
         width: 96,
@@ -469,7 +467,7 @@ class _AyahSeparator extends StatelessWidget {
         child: Container(
           width: 96,
           height: 1,
-          color: MushafColors.rule(brightness),
+          color: Theme.of(context).dividerColor,
         ),
       ),
     );
@@ -500,7 +498,7 @@ class _AyahTile extends StatelessWidget {
                   text: ayahMarkerText(ayah.number),
                   style: TextStyle(
                     fontFamily: medallionFontFamily,
-                    color: MushafColors.gold(Theme.of(context).brightness),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],

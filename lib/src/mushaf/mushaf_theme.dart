@@ -5,12 +5,13 @@
 import 'package:flutter/material.dart';
 
 /// The colours of a printed mushaf: cream paper, sepia ink, antique gold
-/// tooling. Two sets — daylight paper, and a warm "night paper" for dark mode
-/// that keeps the same hues rather than going blue-grey.
+/// tooling. Three sets — daylight paper, a warm "night paper" for dark mode,
+/// and true black for OLED screens, where every lit pixel costs battery.
 ///
-/// The painters in mushaf_frame.dart and the screens draw from these directly
-/// where a ColorScheme role would be a lie (gold rules are not "primary"),
-/// and the [ThemeData] roles are derived from them for everything else.
+/// Widgets should not read these constants directly; they read the
+/// [ColorScheme] roles the themes below fill (primary = gold, onSurface =
+/// ink, surfaceContainerHighest = page, dividerColor = rule), so a new theme
+/// only has to exist here to take effect everywhere.
 abstract final class MushafColors {
   // Light — daylight paper.
   static const paperLight = Color(0xFFF5EEDC);
@@ -24,26 +25,52 @@ abstract final class MushafColors {
   static const inkDark = Color(0xFFE9DFC4);
   static const goldDark = Color(0xFFC8A94B);
 
-  static Color paper(Brightness b) =>
-      b == Brightness.dark ? paperDark : paperLight;
-  static Color page(Brightness b) => b == Brightness.dark ? pageDark : pageLight;
-  static Color ink(Brightness b) => b == Brightness.dark ? inkDark : inkLight;
-  static Color gold(Brightness b) => b == Brightness.dark ? goldDark : goldLight;
-
-  /// The hairline the rules and separators are drawn with. Translucent so it
-  /// softens onto the paper instead of sitting on it as a hard edge.
-  static Color rule(Brightness b) =>
-      ink(b).withValues(alpha: b == Brightness.dark ? 0.35 : 0.28);
+  // OLED — true black, so unlit pixels draw no power. The ink is dimmed a
+  // notch from night paper: full-strength warm white halates on black.
+  static const paperOled = Color(0xFF000000);
+  static const pageOled = Color(0xFF000000);
+  static const inkOled = Color(0xFFCFC5AE);
+  static const goldOled = goldDark;
 }
 
-/// The app theme. One builder for both brightnesses keeps the two schemes in
-/// the same shape — only the palette flips.
-ThemeData mushafTheme(Brightness brightness) {
-  final paper = MushafColors.paper(brightness);
-  final page = MushafColors.page(brightness);
-  final ink = MushafColors.ink(brightness);
-  final gold = MushafColors.gold(brightness);
-  final rule = MushafColors.rule(brightness);
+/// The daylight-paper and night-paper themes.
+ThemeData mushafTheme(Brightness brightness) => brightness == Brightness.dark
+    ? _mushafTheme(
+        brightness,
+        paper: MushafColors.paperDark,
+        page: MushafColors.pageDark,
+        ink: MushafColors.inkDark,
+        gold: MushafColors.goldDark,
+      )
+    : _mushafTheme(
+        brightness,
+        paper: MushafColors.paperLight,
+        page: MushafColors.pageLight,
+        ink: MushafColors.inkLight,
+        gold: MushafColors.goldLight,
+      );
+
+/// The OLED theme: night paper with every background driven to true black.
+ThemeData mushafOledTheme() => _mushafTheme(
+      Brightness.dark,
+      paper: MushafColors.paperOled,
+      page: MushafColors.pageOled,
+      ink: MushafColors.inkOled,
+      gold: MushafColors.goldOled,
+    );
+
+/// One builder for all three themes keeps the schemes in the same shape —
+/// only the palette differs.
+ThemeData _mushafTheme(
+  Brightness brightness, {
+  required Color paper,
+  required Color page,
+  required Color ink,
+  required Color gold,
+}) {
+  // The hairline the rules and separators are drawn with. Translucent so it
+  // softens onto the paper instead of sitting on it as a hard edge.
+  final rule = ink.withValues(alpha: brightness == Brightness.dark ? 0.35 : 0.28);
 
   final scheme = ColorScheme(
     brightness: brightness,

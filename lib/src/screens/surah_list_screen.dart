@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../data/quran_repository.dart';
 import '../data/reading_position.dart';
-import '../mushaf/mushaf_theme.dart';
 import '../settings/settings_controller.dart';
 import 'settings_screen.dart';
 import 'surah_screen.dart';
@@ -173,18 +172,18 @@ class _NumberMedallion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: 44,
       height: 44,
       child: CustomPaint(
-        painter: _MedallionPainter(brightness),
+        painter: _MedallionPainter(scheme.primary),
         child: Center(
           child: Text(
             '$number',
             style: TextStyle(
               fontSize: 13,
-              color: MushafColors.ink(brightness),
+              color: scheme.onSurface,
             ),
           ),
         ),
@@ -195,15 +194,15 @@ class _NumberMedallion extends StatelessWidget {
 
 /// Two concentric diamonds in gold rule.
 class _MedallionPainter extends CustomPainter {
-  const _MedallionPainter(this.brightness);
+  const _MedallionPainter(this.gold);
 
-  final Brightness brightness;
+  final Color gold;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final gold = Paint()
-      ..color = MushafColors.gold(brightness)
+    final rule = Paint()
+      ..color = gold
       ..style = PaintingStyle.stroke;
 
     Path diamond(double radius) => Path()
@@ -214,12 +213,12 @@ class _MedallionPainter extends CustomPainter {
       ..close();
 
     final outer = size.shortestSide / 2 - 1;
-    canvas.drawPath(diamond(outer), gold..strokeWidth = 1.4);
-    canvas.drawPath(diamond(outer - 4), gold..strokeWidth = 0.8);
+    canvas.drawPath(diamond(outer), rule..strokeWidth = 1.4);
+    canvas.drawPath(diamond(outer - 4), rule..strokeWidth = 0.8);
   }
 
   @override
-  bool shouldRepaint(_MedallionPainter old) => old.brightness != brightness;
+  bool shouldRepaint(_MedallionPainter old) => old.gold != gold;
 }
 
 /// The "carry on from where you left off" strip above the list.

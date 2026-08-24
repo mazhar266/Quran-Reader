@@ -31,26 +31,31 @@ class SettingsScreen extends StatelessWidget {
           const _SectionHeader('Appearance'),
           ListTile(
             title: const Text('Theme'),
-            subtitle: Text(_themeLabel(settings.themeMode)),
+            subtitle: Text(settings.themeMode.description),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: SegmentedButton<ThemeMode>(
+            child: SegmentedButton<AppTheme>(
               segments: const [
                 ButtonSegment(
-                  value: ThemeMode.system,
+                  value: AppTheme.system,
                   label: Text('System'),
                   icon: Icon(Icons.brightness_auto_outlined),
                 ),
                 ButtonSegment(
-                  value: ThemeMode.light,
+                  value: AppTheme.light,
                   label: Text('Light'),
                   icon: Icon(Icons.light_mode_outlined),
                 ),
                 ButtonSegment(
-                  value: ThemeMode.dark,
+                  value: AppTheme.dark,
                   label: Text('Dark'),
                   icon: Icon(Icons.dark_mode_outlined),
+                ),
+                ButtonSegment(
+                  value: AppTheme.oled,
+                  label: Text('OLED'),
+                  icon: Icon(Icons.brightness_2_outlined),
                 ),
               ],
               selected: {settings.themeMode},
@@ -189,12 +194,6 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
-
-  static String _themeLabel(ThemeMode mode) => switch (mode) {
-        ThemeMode.system => 'Follow the system setting',
-        ThemeMode.light => 'Always light',
-        ThemeMode.dark => 'Always dark',
-      };
 }
 
 class _SectionHeader extends StatelessWidget {

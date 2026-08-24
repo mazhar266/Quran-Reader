@@ -24,8 +24,11 @@ The mode is a persisted setting, and also toggles from the reader's app bar.
 
 The app is themed to read like a printed mushaf: cream paper, sepia ink, and
 antique-gold tooling, with a warm "night paper" dark scheme rather than
-blue-grey. The palette and both `ThemeData`s live in
-[mushaf_theme.dart](lib/src/mushaf/mushaf_theme.dart).
+blue-grey, and a true-black OLED variant. The palette and the `ThemeData`s
+live in [mushaf_theme.dart](lib/src/mushaf/mushaf_theme.dart); widgets read
+the `ColorScheme` roles (gold is `primary`, ink `onSurface`, the page tint
+`surfaceContainerHighest`), so a new theme only has to exist in that one file
+to take effect everywhere.
 
 The reader's page border — thin outer rule, heavier inner rule, diamond-and-dot
 corners — is **painted**, not an asset
@@ -117,7 +120,10 @@ The same mechanism seeds the opening position when resuming.
 
 ## Settings
 
-- **Theme** — light, dark, or follow the system.
+- **Theme** — light (daylight paper), dark (night paper), OLED (true black,
+  which saves power on OLED screens because black pixels are unlit), or
+  follow the system. The choice is an `AppTheme`, not Flutter's `ThemeMode`,
+  which has no fourth value.
 - **Arabic font** — one of the eight bundled Quranic faces, each listed beside
   a sample set in itself.
 - **Arabic size** — 18–56 pt, with a live preview. English is deliberately

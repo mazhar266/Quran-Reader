@@ -33,12 +33,14 @@ are. Read it before changing anything it covers.
   (no Flutter imports, so it tests without a binding); `tajwid_style.dart`
   turns matches into coloured `TextSpan`s with separate light/dark palettes.
 - `lib/src/mushaf/` — the paper-mushaf look: `mushaf_theme.dart` (cream/sepia/
-  gold palette + both `ThemeData`s) and `mushaf_frame.dart` (the painted
-  double-rule page border with diamond corners, fixed to the viewport — it
-  never scrolls with the text).
+  gold palette + the three `ThemeData`s — light, night-paper dark, true-black
+  OLED; widgets read the `ColorScheme` roles, so themes live only in this
+  file) and `mushaf_frame.dart` (the painted double-rule page border with
+  diamond corners, fixed to the viewport — it never scrolls with the text).
 - `lib/src/settings/settings_controller.dart` — `SettingsController`
   (ChangeNotifier over shared_preferences) + `SettingsScope` InheritedNotifier.
-  Holds theme, reading mode, Arabic font, Arabic font size.
+  Holds theme (`AppTheme` — system/light/dark/OLED, mapped to `ThemeMode` by
+  `materialThemeMode`), reading mode, Arabic font, Arabic font size.
 - `lib/src/screens/` — `surah_list_screen.dart` (home), `surah_screen.dart`
   (reader, both modes), `surah_title.dart` (surah heading + basmalah),
   `settings_screen.dart`, `about_screen.dart`.

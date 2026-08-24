@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quran_reader/src/data/models.dart';
 import 'package:quran_reader/src/settings/settings_controller.dart';
@@ -30,6 +31,14 @@ void main() {
       expect(settings.readingMode, ReadingMode.reading);
       expect(settings.arabicFont, ArabicFont.amiri);
       expect(settings.arabicFontSize, 42.0);
+    });
+
+    test('the OLED theme persists and maps to a dark MaterialApp', () async {
+      final settings = await SettingsController.load();
+      settings.themeMode = AppTheme.oled;
+      final reloaded = await SettingsController.load();
+      expect(reloaded.themeMode, AppTheme.oled);
+      expect(reloaded.materialThemeMode, ThemeMode.dark);
     });
 
     test('clamps the Arabic size to the slider bounds', () async {

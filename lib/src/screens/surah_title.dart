@@ -5,7 +5,6 @@
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
-import '../mushaf/mushaf_theme.dart';
 import '../settings/settings_controller.dart';
 
 /// The basmalah, in the same Uthmani orthography as the ayah text — this is
@@ -27,8 +26,7 @@ class SurahHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final ink = MushafColors.ink(brightness);
+    final scheme = Theme.of(context).colorScheme;
     final family = SettingsScope.of(context).arabicFont.family;
 
     return Padding(
@@ -41,7 +39,7 @@ class SurahHeading extends StatelessWidget {
             // banner; this is the same double rule and corner diamonds as the
             // page frame, in miniature.
             CustomPaint(
-              painter: _CartouchePainter(brightness),
+              painter: _CartouchePainter(scheme.primary),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 28,
@@ -55,7 +53,7 @@ class SurahHeading extends StatelessWidget {
                       fontFamily: family,
                       fontSize: 28,
                       height: 1.6,
-                      color: MushafColors.gold(brightness),
+                      color: scheme.primary,
                     ),
                   ),
                 ),
@@ -71,7 +69,7 @@ class SurahHeading extends StatelessWidget {
                     fontFamily: family,
                     fontSize: 24,
                     height: 1.8,
-                    color: ink,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
@@ -88,9 +86,9 @@ class SurahHeading extends StatelessWidget {
 /// inner one, and a diamond-and-dot where they meet at each corner — the page
 /// frame's vocabulary at cartouche size.
 class _CartouchePainter extends CustomPainter {
-  const _CartouchePainter(this.brightness);
+  const _CartouchePainter(this.gold);
 
-  final Brightness brightness;
+  final Color gold;
 
   static const _outerStroke = 1.0;
   static const _gap = 3.0;
@@ -98,15 +96,15 @@ class _CartouchePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final gold = Paint()
-      ..color = MushafColors.gold(brightness)
+    final rule = Paint()
+      ..color = gold
       ..style = PaintingStyle.stroke;
 
     final outer = Offset.zero & size;
-    canvas.drawRect(outer, gold..strokeWidth = _outerStroke);
+    canvas.drawRect(outer, rule..strokeWidth = _outerStroke);
 
     final inner = outer.deflate(_outerStroke + _gap + _innerStroke / 2);
-    canvas.drawRect(inner, gold..strokeWidth = _innerStroke);
+    canvas.drawRect(inner, rule..strokeWidth = _innerStroke);
 
     final diamondSide = _innerStroke * 3.0;
     for (final corner in [inner.topLeft, inner.topRight, inner.bottomRight, inner.bottomLeft]) {
@@ -116,11 +114,11 @@ class _CartouchePainter extends CustomPainter {
         ..lineTo(corner.dx, corner.dy + diamondSide)
         ..lineTo(corner.dx - diamondSide, corner.dy)
         ..close();
-      canvas.drawPath(diamond, gold..strokeWidth = _outerStroke);
-      canvas.drawCircle(corner, _outerStroke, Paint()..color = gold.color);
+      canvas.drawPath(diamond, rule..strokeWidth = _outerStroke);
+      canvas.drawCircle(corner, _outerStroke, Paint()..color = gold);
     }
   }
 
   @override
-  bool shouldRepaint(_CartouchePainter old) => old.brightness != brightness;
+  bool shouldRepaint(_CartouchePainter old) => old.gold != gold;
 }
