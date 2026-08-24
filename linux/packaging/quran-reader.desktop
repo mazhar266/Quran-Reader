@@ -8,4 +8,4 @@ Exec=quran_reader
 Icon=quran-reader
 # Matches the WM_CLASS the GTK runner sets, so a running window is associated
 # with this entry rather than showing a generic icon.
-StartupWMClass=quran.mazhar.fi
+StartupWMClass=fi.mazhar.quran.reader

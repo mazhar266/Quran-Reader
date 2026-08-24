@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "quran.mazhar.fi" "\0"
+            VALUE "CompanyName", "fi.mazhar.quran.reader" "\0"
             VALUE "FileDescription", "Quran Reader" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "quran_reader" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 quran.mazhar.fi. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 fi.mazhar.quran.reader. All rights reserved." "\0"
             VALUE "OriginalFilename", "quran_reader.exe" "\0"
             VALUE "ProductName", "Quran Reader" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

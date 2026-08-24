@@ -3,7 +3,7 @@
 A Flutter app for reading the Quran, built on [QQ-Lang](https://github.com/mazhar266/QQ-Lang).
 Every ayah on screen comes from a QQL query (`Q:<surah>`) resolved by a native
 Rust library over FFI — the app holds no scripture of its own. Licensed
-GPL-3.0-or-later; application ID `quran.mazhar.fi`.
+GPL-3.0-or-later; application ID `fi.mazhar.quran.reader`.
 
 The README.md is unusually detailed and explains *why* things are the way they
 are. Read it before changing anything it covers.

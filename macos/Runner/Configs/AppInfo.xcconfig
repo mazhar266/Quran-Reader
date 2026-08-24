@@ -8,7 +8,7 @@
 PRODUCT_NAME = Quran Reader
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = quran.mazhar.fi
+PRODUCT_BUNDLE_IDENTIFIER = fi.mazhar.quran.reader
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 quran.mazhar.fi. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 fi.mazhar.quran.reader. All rights reserved.

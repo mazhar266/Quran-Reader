@@ -4,7 +4,7 @@ A Quran reader built on [QQ-Lang](https://github.com/mazhar266/QQ-Lang). Every
 ayah on screen comes from a QQL query (`Q:<surah>`) resolved by the native
 library — the app holds no scripture of its own.
 
-- Application ID / namespace: `quran.mazhar.fi`
+- Application ID / namespace: `fi.mazhar.quran.reader`
 
 ## Two reading modes
 
