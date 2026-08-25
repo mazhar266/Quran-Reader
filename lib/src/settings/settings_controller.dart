@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -145,15 +147,61 @@ class SettingsController extends ChangeNotifier {
   }
 
   /// The text style every Arabic ayah is rendered with.
-  TextStyle arabicTextStyle(BuildContext context) => TextStyle(
-        fontFamily: _arabicFont.family,
-        fontSize: _arabicFontSize,
-        // Quranic faces carry tall vowel marks; the default line height
-        // clips them.
-        height: 1.9,
-        color: Theme.of(context).colorScheme.onSurface,
-      );
+  TextStyle arabicTextStyle(BuildContext context) {
+    final extents = arabicFontExtents(_arabicFont.family);
+    return TextStyle(
+      fontFamily: _arabicFont.family,
+      fontSize: _arabicFontSize,
+      // The face's own reach plus air. Quranic faces carry tall vowel marks
+      // and deep tails, and they disagree by more than an em about how far:
+      // any single fixed height either clips the tallest or leaves the rest
+      // swimming.
+      height: math.max(
+        extents.ascent + extents.descent + lineAir,
+        _minLineHeight,
+      ),
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+  }
 }
+
+/// Air above and below the ink of a line, as a fraction of the font size.
+/// Enough for the reading mode's khata rules to sit between two lines without
+/// touching either.
+const lineAir = 0.34;
+
+/// No face is set tighter than this, however modest its metrics claim to be —
+/// a few under-report how far their own glyphs reach.
+const _minLineHeight = 1.9;
+
+final _extents = <String, ({double ascent, double descent})>{};
+
+/// How far a face reaches above and below the baseline, as fractions of the
+/// font size. Cached per family: the figures come out of the font file, so a
+/// single probe layout each answers for the app's lifetime.
+///
+/// Both the line height and the reading mode's khata rules are placed from
+/// these. Neither can be guessed from the font size alone — a rule dropped by
+/// a fixed fraction of it lands on the letters of every face that reaches
+/// further than the guess allowed.
+({double ascent, double descent}) arabicFontExtents(String family) =>
+    _extents.putIfAbsent(family, () {
+      const probeSize = 100.0;
+      final probe = TextPainter(
+        // One glyph is enough: the metrics belong to the face, not the text.
+        text: TextSpan(
+          text: '\u0627',
+          style: TextStyle(fontFamily: family, fontSize: probeSize),
+        ),
+        textDirection: TextDirection.rtl,
+      )..layout();
+      final line = probe.computeLineMetrics().first;
+      probe.dispose();
+      return (
+        ascent: line.ascent / probeSize,
+        descent: line.descent / probeSize,
+      );
+    });
 
 /// Puts the [SettingsController] in scope and rebuilds dependents on change.
 class SettingsScope extends InheritedNotifier<SettingsController> {

@@ -349,8 +349,7 @@ class _ContinuousPageState extends State<_ContinuousPage> {
 
   /// Paragraph-local y of every ruled line. Measured from layout rather than
   /// computed from the font size, because a line holding an ayah medallion is
-  /// set in a different face and need not share the text's line height. Each
-  /// y already carries the rule's padding below the line box.
+  /// set in a different face and need not share the text's line height.
   List<double> _lineBottoms = const [];
 
   @override
@@ -404,22 +403,39 @@ class _ContinuousPageState extends State<_ContinuousPage> {
   void _measureLines() {
     final paragraph = _paragraph;
     if (paragraph == null || !paragraph.hasSize || _spans.isEmpty) return;
+    final scaler = MediaQuery.textScalerOf(context);
     final painter = TextPainter(
       text: TextSpan(children: _spans, style: widget.arabicStyle),
       textAlign: TextAlign.justify,
       textDirection: TextDirection.rtl,
-      textScaler: MediaQuery.textScalerOf(context),
+      textScaler: scaler,
     )..layout(maxWidth: paragraph.size.width);
-    // Padding below the line box: without it the rule lands exactly where
-    // deep descenders (final yeh, seen tails) dip for several faces, and
-    // reads as a strike-through. Scaled to the font size so it survives the
-    // size slider.
-    final padding = (widget.arabicStyle.fontSize ?? 28) * 0.18;
-    final bottoms = painter
-        .computeLineMetrics()
-        .map((line) => line.baseline + line.descent + padding)
-        .toList(growable: false);
+    final metrics = painter.computeLineMetrics();
     painter.dispose();
+
+    // A line's metrics say where its box ends, not where its glyphs do: the
+    // box carries the leading the line height added, and deep tails (final
+    // yeh, seen) overshoot it besides. So the rule is placed off the face's
+    // own reach instead, in the middle of the band between one line's tails
+    // and the next line's vowel marks — the strip no glyph occupies.
+    final size = scaler.scale(widget.arabicStyle.fontSize ?? 28);
+    final extents = arabicFontExtents(widget.arabicStyle.fontFamily ?? '');
+    final ascent = extents.ascent * size;
+    final descent = extents.descent * size;
+    final bottoms = <double>[];
+    // A single-line paragraph has no band to measure, and falls back to
+    // sitting just clear of the tails.
+    var drop = descent + lineAir * size / 2;
+    for (var i = 0; i < metrics.length; i++) {
+      final baseline = metrics[i].baseline;
+      if (i + 1 < metrics.length) {
+        final tails = baseline + descent;
+        final marks = metrics[i + 1].baseline - ascent;
+        // The last line keeps whatever drop the line above it settled on.
+        drop = (tails + marks) / 2 - baseline;
+      }
+      bottoms.add(baseline + drop);
+    }
     var changed = bottoms.length != _lineBottoms.length;
     for (var i = 0; !changed && i < bottoms.length; i++) {
       changed = bottoms[i] != _lineBottoms[i];
@@ -557,10 +573,9 @@ class _ContinuousPageState extends State<_ContinuousPage> {
   }
 }
 
-/// Khata-style ruled lines: a hairline at each measured line bottom (plus
-/// padding). The positions come from the paragraph's own line metrics, so
-/// medallion lines that set taller stay on the grid instead of drifting off
-/// it.
+/// Khata-style ruled lines: a hairline in the clear band under each line. The
+/// positions come from the paragraph's own line metrics, so medallion lines
+/// that set taller stay on the grid instead of drifting off it.
 class _RuledLinesPainter extends CustomPainter {
   const _RuledLinesPainter(this.lineBottoms, this.color);
 
