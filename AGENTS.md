@@ -87,10 +87,12 @@ stay transparent — see README for why).
 ## Architecture notes that are easy to get wrong
 
 - **Two reading modes.** *Reading* = Arabic only as one continuous paragraph
-  (deliberately not a lazy list — line breaks depend on all previous ayahs).
-  *Normal* = Arabic + English per ayah in a `ScrollablePositionedList`. Mode
-  affects how the current ayah is located for resume: paragraph position
-  mapping vs. item index.
+  (deliberately not a lazy list — line breaks depend on all previous ayahs),
+  with khata-style ruled hairlines under every line; the rule positions are
+  measured from a mirrored `TextPainter` layout since medallion lines can set
+  taller. *Normal* = Arabic + English per ayah in a
+  `ScrollablePositionedList`. Mode affects how the current ayah is located for
+  resume: paragraph position mapping vs. item index.
 - **Data unpacking.** QQL needs real filesystem paths, so `QuranRepository`
   unpacks `assets/qqldata/` into the app support directory on first launch and
   opens one native context for the app's lifetime. **Bump `_dataVersion` in

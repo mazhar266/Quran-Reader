@@ -152,11 +152,12 @@ class _SurahScreenState extends State<SurahScreen> {
 
     // Keyed by mode so that switching modes rebuilds the scroller from
     // scratch rather than carrying a meaningless offset across two very
-    // different layouts. The heading stays above both, which also keeps it
-    // clear of the paragraph offsets reading mode measures against.
+    // different layouts. The heading is part of each scroller — it rolls away
+    // with the text — so both modes receive it here.
     final Widget page = settings.readingMode == ReadingMode.reading
         ? _ContinuousPage(
             key: const ValueKey('reading'),
+            surah: widget.surah,
             ayahs: ayahs,
             arabicStyle: arabicStyle,
             jump: _jump,
@@ -164,6 +165,7 @@ class _SurahScreenState extends State<SurahScreen> {
           )
         : _AyahList(
             key: const ValueKey('normal'),
+            surah: widget.surah,
             ayahs: ayahs,
             arabicStyle: arabicStyle,
             jump: _jump,
@@ -171,20 +173,15 @@ class _SurahScreenState extends State<SurahScreen> {
           );
 
     // The page frame is fixed to the viewport like a real page border, so it
-    // sits behind the column rather than inside either scroller — which also
-    // keeps the reading-mode paragraph measurements independent of it. The
-    // content inset is what clears the rules and their breathing room.
+    // sits behind the scroller rather than inside it — which also keeps the
+    // reading-mode paragraph measurements independent of it. The content
+    // inset is what clears the rules and their breathing room.
     return Stack(
       children: [
         const Positioned.fill(child: MushafFrame()),
         Padding(
           padding: const EdgeInsets.all(MushafFrame.contentInset),
-          child: Column(
-            children: [
-              SurahHeading(surah: widget.surah),
-              Expanded(child: page),
-            ],
-          ),
+          child: page,
         ),
       ],
     );
@@ -197,15 +194,20 @@ class _SurahScreenState extends State<SurahScreen> {
 /// off directly, and so resuming can jump to an ayah by index — neither is
 /// possible with a plain lazy ListView, where items far from the viewport have
 /// no known height.
+///
+/// The surah heading is item 0, so it scrolls away with the text like a real
+/// page; every ayah index is therefore shifted by one.
 class _AyahList extends StatefulWidget {
   const _AyahList({
     super.key,
+    required this.surah,
     required this.ayahs,
     required this.arabicStyle,
     required this.jump,
     required this.onAyahInView,
   });
 
+  final Surah surah;
   final List<Ayah> ayahs;
   final TextStyle arabicStyle;
   final AyahJump? jump;
@@ -233,7 +235,8 @@ class _AyahListState extends State<_AyahList> {
     // jumps that come afterwards.
     if (jump != null && jump.seq != oldWidget.jump?.seq && _scroll.isAttached) {
       _scroll.scrollTo(
-        index: _indexOf(jump.ayah),
+        // +1: item 0 is the heading.
+        index: _indexOf(jump.ayah) + 1,
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOutCubic,
       );
@@ -261,7 +264,13 @@ class _AyahListState extends State<_AyahList> {
           null,
           (best, p) => best == null || p.index < best.index ? p : best,
         );
-    if (first != null) widget.onAyahInView(widget.ayahs[first.index].number);
+    if (first == null) return;
+    // Item 0 is the heading; while it is the topmost thing visible, the
+    // reader is at the start of the surah.
+    final ayahIndex = first.index - 1;
+    widget.onAyahInView(ayahIndex < 0
+        ? widget.ayahs.first.number
+        : widget.ayahs[ayahIndex].number);
   }
 
   @override
@@ -269,15 +278,20 @@ class _AyahListState extends State<_AyahList> {
     return ScrollablePositionedList.separated(
       itemPositionsListener: _positions,
       itemScrollController: _scroll,
-      initialScrollIndex: widget.jump == null ? 0 : _indexOf(widget.jump!.ayah),
+      initialScrollIndex:
+          widget.jump == null ? 0 : _indexOf(widget.jump!.ayah) + 1,
       // The frame's content inset already supplies the page margins.
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
-      itemCount: widget.ayahs.length,
-      separatorBuilder: (_, _) => const _AyahSeparator(),
-      itemBuilder: (context, index) => _AyahTile(
-        ayah: widget.ayahs[index],
-        arabicStyle: widget.arabicStyle,
-      ),
+      itemCount: widget.ayahs.length + 1,
+      // No rule directly beneath the heading: the cartouche is rule enough.
+      separatorBuilder: (_, index) =>
+          index == 0 ? const SizedBox(height: 8) : const _AyahSeparator(),
+      itemBuilder: (context, index) => index == 0
+          ? SurahHeading(surah: widget.surah)
+          : _AyahTile(
+              ayah: widget.ayahs[index - 1],
+              arabicStyle: widget.arabicStyle,
+            ),
     );
   }
 }
@@ -293,15 +307,25 @@ class _AyahListState extends State<_AyahList> {
 /// Because it is a single paragraph there are no items to count, so the ayah
 /// in view is found by asking the laid-out paragraph which character sits at
 /// the top of the viewport, and mapping that back through [_ayahAt].
+///
+/// The surah heading scrolls with the text, sitting above the paragraph in the
+/// same scroll view, so every paragraph offset is measured against the heading
+/// height as well — see [_headingExtent].
+///
+/// Every line of the paragraph is underlined by a hairline rule, khata
+/// (exercise-book) style; the rule positions are read off the laid-out
+/// paragraph rather than assumed, because medallion lines can set taller.
 class _ContinuousPage extends StatefulWidget {
   const _ContinuousPage({
     super.key,
+    required this.surah,
     required this.ayahs,
     required this.arabicStyle,
     required this.jump,
     required this.onAyahInView,
   });
 
+  final Surah surah;
   final List<Ayah> ayahs;
   final TextStyle arabicStyle;
   final AyahJump? jump;
@@ -314,10 +338,20 @@ class _ContinuousPage extends StatefulWidget {
 class _ContinuousPageState extends State<_ContinuousPage> {
   final _scroll = ScrollController();
   final _paragraphKey = GlobalKey();
+  final _headingKey = GlobalKey();
 
   /// Character offset in the paragraph at which each ayah starts, parallel to
   /// [_ContinuousPage.ayahs]. Rebuilt whenever the spans are.
   List<int> _ayahStarts = const [];
+
+  /// The paragraph's spans, kept so [_measureLines] can re-lay them out.
+  List<InlineSpan> _spans = const [];
+
+  /// Paragraph-local y of every ruled line. Measured from layout rather than
+  /// computed from the font size, because a line holding an ayah medallion is
+  /// set in a different face and need not share the text's line height. Each
+  /// y already carries the rule's padding below the line box.
+  List<double> _lineBottoms = const [];
 
   @override
   void initState() {
@@ -355,6 +389,44 @@ class _ContinuousPageState extends State<_ContinuousPage> {
     return object is RenderParagraph ? object : null;
   }
 
+  /// The laid-out height of the surah heading above the paragraph, in
+  /// scroll-content coordinates. Zero before the first frame; both callers
+  /// that need it (jump and report) only run after layout.
+  double get _headingExtent {
+    final object = _headingKey.currentContext?.findRenderObject();
+    return object is RenderBox && object.hasSize ? object.size.height : 0;
+  }
+
+  /// Read every line's bottom edge by re-laying the paragraph out with an
+  /// identical [TextPainter] (RenderParagraph does not expose its line
+  /// metrics). Runs after a frame because the width must be known; a width,
+  /// font or size change rebuilds the page and lands here again.
+  void _measureLines() {
+    final paragraph = _paragraph;
+    if (paragraph == null || !paragraph.hasSize || _spans.isEmpty) return;
+    final painter = TextPainter(
+      text: TextSpan(children: _spans, style: widget.arabicStyle),
+      textAlign: TextAlign.justify,
+      textDirection: TextDirection.rtl,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: paragraph.size.width);
+    // Padding below the line box: without it the rule lands exactly where
+    // deep descenders (final yeh, seen tails) dip for several faces, and
+    // reads as a strike-through. Scaled to the font size so it survives the
+    // size slider.
+    final padding = (widget.arabicStyle.fontSize ?? 28) * 0.18;
+    final bottoms = painter
+        .computeLineMetrics()
+        .map((line) => line.baseline + line.descent + padding)
+        .toList(growable: false);
+    painter.dispose();
+    var changed = bottoms.length != _lineBottoms.length;
+    for (var i = 0; !changed && i < bottoms.length; i++) {
+      changed = bottoms[i] != _lineBottoms[i];
+    }
+    if (changed && mounted) setState(() => _lineBottoms = bottoms);
+  }
+
   /// Put the line [ayah] starts on at the top of the viewport.
   void _scrollTo(int ayah, {bool animate = false}) {
     final index = widget.ayahs.indexWhere((a) => a.number == ayah);
@@ -362,12 +434,13 @@ class _ContinuousPageState extends State<_ContinuousPage> {
     if (index < 0 || paragraph == null || index >= _ayahStarts.length) return;
     if (!_scroll.hasClients) return;
 
-    // Where that ayah's first character sits within the paragraph.
+    // Where that ayah's first character sits within the paragraph; the
+    // paragraph itself starts below the heading plus the top padding.
     final caret = paragraph.getOffsetForCaret(
       TextPosition(offset: _ayahStarts[index]),
       Rect.zero,
     );
-    final target = (caret.dy + _topPadding)
+    final target = (caret.dy + _headingExtent + _topPadding)
         .clamp(0.0, _scroll.position.maxScrollExtent);
 
     if (animate) {
@@ -384,9 +457,11 @@ class _ContinuousPageState extends State<_ContinuousPage> {
   void _report() {
     final paragraph = _paragraph;
     if (paragraph == null || _ayahStarts.isEmpty) return;
-    // The viewport top, in the paragraph's own coordinates. x is the right
-    // edge because the text is right-to-left, so that is where a line starts.
-    final localY = (_scroll.offset - _topPadding).clamp(0.0, double.infinity);
+    // The viewport top, in the paragraph's own coordinates — past the heading
+    // and the top padding. x is the right edge because the text is
+    // right-to-left, so that is where a line starts.
+    final localY = (_scroll.offset - _headingExtent - _topPadding)
+        .clamp(0.0, double.infinity);
     final position = paragraph.getPositionForOffset(
       Offset(paragraph.size.width, localY),
     );
@@ -433,43 +508,92 @@ class _ContinuousPageState extends State<_ContinuousPage> {
       chars += ayah.arabic.length + marker.length;
     }
     _ayahStarts = starts;
+    _spans = spans;
 
     return SingleChildScrollView(
       controller: _scroll,
       // The frame's content inset supplies the side margins; the top value
       // stays _topPadding because the scroll math measures against it.
       padding: const EdgeInsets.fromLTRB(0, _topPadding, 0, 24),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Text.rich(
-          TextSpan(children: spans),
-          key: _paragraphKey,
-          style: widget.arabicStyle,
-          textAlign: TextAlign.justify,
-        ),
+      child: Column(
+        children: [
+          SurahHeading(key: _headingKey, surah: widget.surah),
+          LayoutBuilder(
+            builder: (context, _) {
+              // The ruled lines sit at measured line positions, which only
+              // exist after layout — schedule the read, the painter repaints
+              // when they change.
+              WidgetsBinding.instance
+                  .addPostFrameCallback((_) => _measureLines());
+              return Directionality(
+                textDirection: TextDirection.rtl,
+                // A Column hands its children loose constraints, but the
+                // paragraph must span the full width or the justification has
+                // nothing to stretch against.
+                child: SizedBox(
+                  width: double.infinity,
+                  // Khata rules: a hairline under every line, like an exercise
+                  // book. Painted, not a widget per line, so a long surah
+                  // stays one paragraph.
+                  child: CustomPaint(
+                    painter: _RuledLinesPainter(
+                      _lineBottoms,
+                      Theme.of(context).dividerColor,
+                    ),
+                    child: Text.rich(
+                      TextSpan(children: spans),
+                      key: _paragraphKey,
+                      style: widget.arabicStyle,
+                      textAlign: TextAlign.justify,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Normal mode: a short centred hairline between ayahs, where a full-width
-/// Divider would cut across the page like a ruled exercise book.
+/// Khata-style ruled lines: a hairline at each measured line bottom (plus
+/// padding). The positions come from the paragraph's own line metrics, so
+/// medallion lines that set taller stay on the grid instead of drifting off
+/// it.
+class _RuledLinesPainter extends CustomPainter {
+  const _RuledLinesPainter(this.lineBottoms, this.color);
+
+  final List<double> lineBottoms;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rule = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (final y in lineBottoms) {
+      if (y > size.height) break;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), rule);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RuledLinesPainter old) =>
+      old.lineBottoms != lineBottoms || old.color != color;
+}
+
+/// Normal mode: a full-width hairline between ayahs, like the ruled lines of
+/// a paper page.
 class _AyahSeparator extends StatelessWidget {
   const _AyahSeparator();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 96,
-        height: 28,
-        alignment: Alignment.center,
-        child: Container(
-          width: 96,
-          height: 1,
-          color: Theme.of(context).dividerColor,
-        ),
-      ),
+    return Divider(
+      height: 28,
+      thickness: 1,
+      color: Theme.of(context).dividerColor,
     );
   }
 }

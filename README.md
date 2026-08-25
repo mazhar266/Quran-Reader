@@ -35,8 +35,12 @@ corners — is **painted**, not an asset
 ([mushaf_frame.dart](lib/src/mushaf/mushaf_frame.dart)), and it is fixed to the
 viewport rather than scrolling with the text, like a real page. The same
 double-rule vocabulary decorates the surah heading's cartouche and the number
-medallions in the surah list. English translations are set in the platform's
-generic serif; Arabic stays in the reader's chosen Quranic face.
+medallions in the surah list. Reading mode rules a hairline under every line,
+khata (exercise-book) style; the rule positions are read off a mirrored
+`TextPainter` layout rather than assumed from the font size, because a line
+holding an ayah medallion is set in a different face and can sit taller.
+English translations are set in the platform's generic serif; Arabic stays in
+the reader's chosen Quranic face.
 
 ## Tajwid colouring
 
